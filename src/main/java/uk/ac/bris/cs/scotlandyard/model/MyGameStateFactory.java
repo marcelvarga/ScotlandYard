@@ -10,6 +10,7 @@ import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Factory;
 /**
  * cw-model
  * Stage 1: Complete this class
+ * asfobowevbewvin0b9veq
  */
 public final class MyGameStateFactory implements Factory<GameState> {
 
