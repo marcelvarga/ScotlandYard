@@ -4,6 +4,8 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import java.util.*;
 import javax.annotation.Nonnull;
+
+import com.sun.javafx.geom.AreaOp;
 import uk.ac.bris.cs.scotlandyard.model.Board.GameState;
 import uk.ac.bris.cs.scotlandyard.model.Piece.*;
 
@@ -51,6 +53,28 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			GameSetup setup,
 			Player mrX,
 			ImmutableList<Player> detectives) {
+
+		//Throws exceptions on illegal inputs//
+		//Rounds//
+		if(setup.rounds.isEmpty()) throw new IllegalArgumentException("Rounds is empty!");
+
+		//Mr X//
+		boolean mrXInDetectives = detectives.stream().anyMatch(Player::isMrX);
+		if(Objects.isNull(mrX)) throw new NullPointerException("Mr X cannot be null!");
+		if(!mrXInDetectives && !mrX.isMrX()) throw new IllegalArgumentException("No Mr X!");
+		if(mrXInDetectives && !mrX.isMrX()) throw new IllegalArgumentException("Mr X must come first!");
+
+		//Detectives//
+		if(detectives.isEmpty()) throw new IllegalArgumentException("No detectives!");
+		//if(detectives.stream().anyMatch(detective -> detective.has(ScotlandYard.Ticket.DOUBLE))) throw new IllegalArgumentException("Detectives can't have doubles!");
+		//if(detectives.stream().anyMatch(detective -> detective.has(ScotlandYard.Ticket.SECRET))) throw new IllegalArgumentException("Detectives can't have secrets!");
+
+		for (int i = 0; i < detectives.size(); i++) {
+			for (int j = 0; j < detectives.size(); j++) {
+				if ((i != j) && (detectives.get(i).equals(detectives.get(j))))
+					throw new IllegalArgumentException("Duplicate detective alert!");
+			}
+		}
 
 		return new MyGameState(setup, ImmutableSet.of(MrX.MRX), ImmutableList.of(), mrX, detectives);
 	}
