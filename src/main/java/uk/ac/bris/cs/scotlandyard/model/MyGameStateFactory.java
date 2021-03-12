@@ -63,16 +63,16 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		if(Objects.isNull(mrX)) throw new NullPointerException("Mr X cannot be null!");
 		if(!mrXInDetectives && !mrX.isMrX()) throw new IllegalArgumentException("No Mr X!");
 		if(mrXInDetectives && !mrX.isMrX()) throw new IllegalArgumentException("Mr X must come first!");
+		if(mrXInDetectives && mrX.isMrX()) throw new IllegalArgumentException("There can only be one Mr X!");
 
 		//Detectives//
 		if(detectives.isEmpty()) throw new IllegalArgumentException("No detectives!");
-		//if(detectives.stream().anyMatch(detective -> detective.has(ScotlandYard.Ticket.DOUBLE))) throw new IllegalArgumentException("Detectives can't have doubles!");
-		//if(detectives.stream().anyMatch(detective -> detective.has(ScotlandYard.Ticket.SECRET))) throw new IllegalArgumentException("Detectives can't have secrets!");
+		if(detectives.stream().anyMatch(detective -> detective.has(ScotlandYard.Ticket.DOUBLE))) throw new IllegalArgumentException("Detectives can't have doubles!");
+		if(detectives.stream().anyMatch(detective -> detective.has(ScotlandYard.Ticket.SECRET))) throw new IllegalArgumentException("Detectives can't have secrets!");
 
 		for (int i = 0; i < detectives.size(); i++) {
-			for (int j = 0; j < detectives.size(); j++) {
-				if ((i != j) && (detectives.get(i).equals(detectives.get(j))))
-					throw new IllegalArgumentException("Duplicate detective alert!");
+			for (int j = i+1; j < detectives.size(); j++) {
+				if (detectives.get(i).equals(detectives.get(j))) throw new IllegalArgumentException("Duplicate detective alert!");
 			}
 		}
 
