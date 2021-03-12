@@ -30,6 +30,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			this.log = log;
 			this.mrX = mrX;
 			this.detectives = detectives;
+			this.winner = ImmutableSet.of();
 		}
 		private GameSetup setup;
 		private ImmutableSet<Piece> remaining;
@@ -41,10 +42,21 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		private ImmutableSet<Piece> winner;
 
 		@Override public GameSetup getSetup() {  return setup; }
-		@Override public ImmutableSet<Piece> getPlayers() { return null; }
-		@Override public Optional<Integer> getDetectiveLocation(Detective detective) { return null; }
-		@Override public Optional<TicketBoard> getPlayerTickets(Piece piece) { return null; }
-		@Override public ImmutableList<LogEntry> getMrXTravelLog() { return null; }
+		@Override public ImmutableSet<Piece> getPlayers() {
+			Set<Piece> Players = new HashSet<Piece>();
+			for(Player player : detectives){
+				Players.add(player.piece());
+			}
+			Players.add(mrX.piece());
+			return ImmutableSet.copyOf(Players);
+		}
+		@Override public Optional<Integer> getDetectiveLocation(Detective detective) {
+			for(Player player : detectives)
+				if(player.piece().equals(detective)) return Optional.of(player.location());
+			return Optional.empty();
+			}
+		@Override public Optional<TicketBoard> getPlayerTickets(Piece piece) { return null; } //TODO
+		@Override public ImmutableList<LogEntry> getMrXTravelLog() { return log; }
 		@Override public ImmutableSet<Piece> getWinner() { return winner; }
  		@Override public ImmutableSet<Move> getAvailableMoves() { return moves; }
  		@Override public GameState advance(Move move) {  return null;  }
@@ -58,23 +70,26 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		//Rounds//
 		if(setup.rounds.isEmpty()) throw new IllegalArgumentException("Rounds is empty!");
 
+		//Graph//
+		if(setup.graph.nodes().isEmpty()) throw new IllegalArgumentException("Graph can't be empty!");
+
 		//Mr X//
 		boolean mrXInDetectives = detectives.stream().anyMatch(Player::isMrX);
 		if(Objects.isNull(mrX)) throw new NullPointerException("Mr X cannot be null!");
 		if(!mrXInDetectives && !mrX.isMrX()) throw new IllegalArgumentException("No Mr X!");
-		if(mrXInDetectives && !mrX.isMrX()) throw new IllegalArgumentException("Mr X must come first!");
-		if(mrXInDetectives && mrX.isMrX()) throw new IllegalArgumentException("There can only be one Mr X!");
 
 		//Detectives//
 		if(detectives.isEmpty()) throw new IllegalArgumentException("No detectives!");
 		if(detectives.stream().anyMatch(detective -> detective.has(ScotlandYard.Ticket.DOUBLE))) throw new IllegalArgumentException("Detectives can't have doubles!");
 		if(detectives.stream().anyMatch(detective -> detective.has(ScotlandYard.Ticket.SECRET))) throw new IllegalArgumentException("Detectives can't have secrets!");
 
-		for (int i = 0; i < detectives.size(); i++) {
+		for (int i = 0; i < detectives.size() - 1; i++)
 			for (int j = i+1; j < detectives.size(); j++) {
-				if (detectives.get(i).equals(detectives.get(j))) throw new IllegalArgumentException("Duplicate detective alert!");
+				if (detectives.get(i).equals(detectives.get(j)))
+					throw new IllegalArgumentException("Duplicate detective alert!");
+				if (detectives.get(i).location() == detectives.get(j).location())
+					throw new IllegalArgumentException("There can't be two detectives at the same location!");
 			}
-		}
 
 		return new MyGameState(setup, ImmutableSet.of(MrX.MRX), ImmutableList.of(), mrX, detectives);
 	}
