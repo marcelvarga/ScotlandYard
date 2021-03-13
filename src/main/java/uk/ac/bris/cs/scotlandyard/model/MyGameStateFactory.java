@@ -5,8 +5,6 @@ import com.google.common.collect.ImmutableSet;
 import java.util.*;
 import javax.annotation.Nonnull;
 
-import com.google.common.collect.Sets;
-import com.sun.javafx.geom.AreaOp;
 import uk.ac.bris.cs.scotlandyard.model.Board.GameState;
 import uk.ac.bris.cs.scotlandyard.model.Piece.*;
 
