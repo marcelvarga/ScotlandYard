@@ -5,6 +5,7 @@ import com.google.common.collect.ImmutableSet;
 import java.util.*;
 import javax.annotation.Nonnull;
 
+import com.google.common.collect.Sets;
 import com.sun.javafx.geom.AreaOp;
 import uk.ac.bris.cs.scotlandyard.model.Board.GameState;
 import uk.ac.bris.cs.scotlandyard.model.Piece.*;
@@ -31,6 +32,10 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			this.mrX = mrX;
 			this.detectives = detectives;
 			this.winner = ImmutableSet.of();
+
+			List<Player> allPlayers = new ArrayList<>(detectives);
+			allPlayers.add(mrX);
+			this.everyone = ImmutableList.copyOf(allPlayers);
 		}
 		private GameSetup setup;
 		private ImmutableSet<Piece> remaining;
@@ -43,19 +48,19 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 		@Override public GameSetup getSetup() {  return setup; }
 		@Override public ImmutableSet<Piece> getPlayers() {
-			Set<Piece> Players = new HashSet<Piece>();
-			for(Player player : detectives){
-				Players.add(player.piece());
-			}
-			Players.add(mrX.piece());
-			return ImmutableSet.copyOf(Players);
+			Set<Piece> players = new HashSet<Piece>();
+			for (Player player : everyone)
+				players.add(player.piece());
+			return ImmutableSet.copyOf(players);
 		}
 		@Override public Optional<Integer> getDetectiveLocation(Detective detective) {
-			for(Player player : detectives)
-				if(player.piece().equals(detective)) return Optional.of(player.location());
+			for (Player player : detectives)
+				if (player.piece().equals(detective)) return Optional.of(player.location());
 			return Optional.empty();
 			}
-		@Override public Optional<TicketBoard> getPlayerTickets(Piece piece) { return null; } //TODO
+		@Override public Optional<TicketBoard> getPlayerTickets(Piece piece) {
+			return null;
+		} //TODO
 		@Override public ImmutableList<LogEntry> getMrXTravelLog() { return log; }
 		@Override public ImmutableSet<Piece> getWinner() { return winner; }
  		@Override public ImmutableSet<Move> getAvailableMoves() { return moves; }
