@@ -1,6 +1,7 @@
 package uk.ac.bris.cs.scotlandyard.model;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import java.util.*;
 import javax.annotation.Nonnull;
@@ -57,8 +58,23 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			return Optional.empty();
 			}
 		@Override public Optional<TicketBoard> getPlayerTickets(Piece piece) {
-			return null;
-		} //TODO
+			for(Player player : everyone)
+				if(player.piece() == piece)
+				return Optional.of(new TicketBoard() {
+
+				ImmutableMap<ScotlandYard.Ticket, Integer> tickets;
+
+
+				public int getCount(@Nonnull ScotlandYard.Ticket ticket) {
+					return tickets.get(ticket);
+				}
+			});
+			return Optional.empty();
+		}
+		//ImmutableMap.of(TAXI, taxi,BUS, bus,UNDERGROUND, underground,DOUBLE, x2,SECRET, secret)
+		//.forEach((ticket, count) ->assertThat(game.getPlayerTickets(colour)).get().extracting(b -> b.getCount(ticket))
+		//.as("Ticket count for %s did not match", ticket).isEqualTo(count));
+		//TODO
 		@Override public ImmutableList<LogEntry> getMrXTravelLog() { return log; }
 		@Override public ImmutableSet<Piece> getWinner() { return winner; }
  		@Override public ImmutableSet<Move> getAvailableMoves() { return moves; }
