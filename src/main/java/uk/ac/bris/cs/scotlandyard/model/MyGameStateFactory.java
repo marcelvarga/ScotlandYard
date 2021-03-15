@@ -6,6 +6,7 @@ import com.google.common.collect.ImmutableSet;
 import java.util.*;
 import javax.annotation.Nonnull;
 
+import com.google.common.collect.Iterables;
 import uk.ac.bris.cs.scotlandyard.model.Board.GameState;
 import uk.ac.bris.cs.scotlandyard.model.Piece.*;
 
@@ -69,8 +70,33 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		}
 		@Override public ImmutableList<LogEntry> getMrXTravelLog() { return log; }
 		@Override public ImmutableSet<Piece> getWinner() { return winner; }
+
  		@Override public ImmutableSet<Move> getAvailableMoves() { return moves; }
- 		@Override public GameState advance(Move move) {  return null;  }
+
+ 		@Override public GameState advance(Move move) { return build(getSetup(), mrX, (ImmutableList<Player>) detectives); }
+	}
+
+	private static ImmutableSet<Move.SingleMove> makeSingleMoves(
+			GameSetup setup,
+			List<Player> detectives,
+			Player player,
+			int source){
+		final var singleMoves = new ArrayList<Move.SingleMove>();
+		for(int destination : setup.graph.adjacentNodes(source)) {
+
+			// You cannot move onto a detective
+			if (detectives.stream().anyMatch(d -> d.location() == destination)) continue;
+
+			// You must have the required ticket
+			for(ScotlandYard.Transport t : Objects.requireNonNull(setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of()))) {
+				if (player.has(t.requiredTicket())) { //construct SingleMove and add to the list of moves to return
+					singleMoves.add(new Move.SingleMove(player.piece(), player.location(), t.requiredTicket(), destination));
+				}
+			}
+			//  Consider the rules of secret moves here
+			//  add moves to the destination via a secret ticket if there are any left with the player
+		}
+		return ImmutableSet.copyOf(singleMoves);
 	}
 
 	@Nonnull @Override public GameState build(
@@ -86,9 +112,8 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		if(setup.graph.nodes().isEmpty()) throw new IllegalArgumentException("Graph can't be empty!");
 
 		//Mr X//
-		boolean mrXInDetectives = detectives.stream().anyMatch(Player::isMrX);
 		if(Objects.isNull(mrX)) throw new NullPointerException("Mr X cannot be null!");
-		if(!mrXInDetectives && !mrX.isMrX()) throw new IllegalArgumentException("No Mr X!");
+		if(detectives.stream().noneMatch(Player::isMrX) && !mrX.isMrX()) throw new IllegalArgumentException("No Mr X!");
 
 		//Detectives//
 		if(detectives.isEmpty()) throw new IllegalArgumentException("No detectives!");
