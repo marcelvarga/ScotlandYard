@@ -99,6 +99,43 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		return ImmutableSet.copyOf(singleMoves);
 	}
 
+	private static ImmutableSet<Move.DoubleMove> makeDoubleMoves(
+			GameSetup setup,
+			List<Player> detectives,
+			Player player,
+			int source){
+		final var doubleMoves = new ArrayList<Move.DoubleMove>();
+		for(int destination1 : setup.graph.adjacentNodes(source)) {
+
+			// You cannot move onto a detective
+			if (detectives.stream().anyMatch(d -> d.location() == destination1)) continue;
+
+			// You must have the required ticket
+			for(ScotlandYard.Transport t1 : Objects.requireNonNull(setup.graph.edgeValueOrDefault(source, destination1, ImmutableSet.of()))) {
+				if (player.has(t1.requiredTicket())) {
+
+					//Do it again!//
+
+					for (int destination2 : setup.graph.adjacentNodes(destination1)) {
+
+						// You cannot move onto a detective
+						if (detectives.stream().anyMatch(d -> d.location() == destination2)) continue;
+
+						// You must have the required ticket
+						for (ScotlandYard.Transport t2 : Objects.requireNonNull(setup.graph.edgeValueOrDefault(destination1, destination2, ImmutableSet.of()))) {
+							if (player.has(t2.requiredTicket())) {
+								doubleMoves.add(new Move.DoubleMove(player.piece(), player.location(), t1.requiredTicket(), destination1, t2.requiredTicket(), destination2));
+							}
+						}
+					}
+				}
+			}
+			//  Consider the rules of secret moves here
+			//  add moves to the destination via a secret ticket if there are any left with the player
+		}
+		return ImmutableSet.copyOf(doubleMoves);
+	}
+
 	@Nonnull @Override public GameState build(
 			GameSetup setup,
 			Player mrX,
