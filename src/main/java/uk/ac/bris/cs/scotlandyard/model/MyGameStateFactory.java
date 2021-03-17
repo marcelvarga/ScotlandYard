@@ -83,7 +83,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			ImmutableSet<Move.SingleMove> singleMoves = makeSingleMoves(setup, detectives, currentPlayer, currentPlayer.location());
 			Set<Move> possibleMoves = new HashSet<>(singleMoves);
 
-			if (currentPlayer.isMrX()) {
+			if (currentPlayer.isMrX() && currentPlayer.has(ScotlandYard.Ticket.DOUBLE)) {
 				ImmutableSet<Move.DoubleMove> doubleMoves = makeDoubleMoves(setup, detectives, currentPlayer, currentPlayer.location());
 				possibleMoves.addAll(doubleMoves);
 			}
@@ -109,7 +109,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			for(ScotlandYard.Transport t : Objects.requireNonNull(setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of()))) {
 				if (player.has(t.requiredTicket())) { //construct SingleMove and add to the list of moves to return
 					singleMoves.add(new Move.SingleMove(player.piece(), player.location(), t.requiredTicket(), destination));
-				} else if (player.has(ScotlandYard.Ticket.SECRET)) {
+				} if (player.has(ScotlandYard.Ticket.SECRET)) {
 					singleMoves.add(new Move.SingleMove(player.piece(), player.location(), ScotlandYard.Ticket.SECRET, destination));
 				}
 			}
@@ -125,34 +125,18 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			Player player,
 			int source){
 		final var doubleMoves = new ArrayList<Move.DoubleMove>();
-		for(int destination1 : setup.graph.adjacentNodes(source)) {
 
-			// You cannot move onto a detective
-			if (detectives.stream().anyMatch(d -> d.location() == destination1)) continue;
+		ImmutableSet<Move.SingleMove> singleMoves = makeSingleMoves(setup, detectives, player, source);
 
-			// You must have the required ticket
-			for(ScotlandYard.Transport t1 : Objects.requireNonNull(setup.graph.edgeValueOrDefault(source, destination1, ImmutableSet.of()))) {
-				if (player.has(t1.requiredTicket())) {
+		for (Move.SingleMove singleMove1: singleMoves) {
 
-					//Do it again!//
+			ImmutableSet<Move.SingleMove> MoreSingleMoves = makeSingleMoves(setup, detectives, player.use(singleMove1.ticket), singleMove1.destination);
 
-					for (int destination2 : setup.graph.adjacentNodes(destination1)) {
-
-						// You cannot move onto a detective
-						if (detectives.stream().anyMatch(d -> d.location() == destination2)) continue;
-
-						// You must have the required ticket
-						for (ScotlandYard.Transport t2 : Objects.requireNonNull(setup.graph.edgeValueOrDefault(destination1, destination2, ImmutableSet.of()))) {
-							if (player.has(t2.requiredTicket())) {
-								doubleMoves.add(new Move.DoubleMove(player.piece(), player.location(), t1.requiredTicket(), destination1, t2.requiredTicket(), destination2));
-							}
-						}
-					}
-				}
+			for (Move.SingleMove singleMove2 : MoreSingleMoves) {
+				doubleMoves.add(new Move.DoubleMove(player.piece(), source, singleMove1.ticket, singleMove1.destination, singleMove2.ticket, singleMove2.destination));
 			}
-			//  Consider the rules of secret moves here
-			//  add moves to the destination via a secret ticket if there are any left with the player
 		}
+
 		return ImmutableSet.copyOf(doubleMoves);
 	}
 
