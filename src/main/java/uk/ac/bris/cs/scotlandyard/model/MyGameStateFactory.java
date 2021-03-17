@@ -1,16 +1,14 @@
 package uk.ac.bris.cs.scotlandyard.model;
 
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import java.util.*;
-import javax.annotation.Nonnull;
-
-import com.google.common.collect.Iterables;
 import uk.ac.bris.cs.scotlandyard.model.Board.GameState;
-import uk.ac.bris.cs.scotlandyard.model.Piece.*;
-
+import uk.ac.bris.cs.scotlandyard.model.Piece.Detective;
+import uk.ac.bris.cs.scotlandyard.model.Piece.MrX;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Factory;
+
+import javax.annotation.Nonnull;
+import java.util.*;
 
 /**
  * cw-model
@@ -53,32 +51,28 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		private ImmutableSet<Piece> winner;
 		private Player currentPlayer;
 
-		@Override public GameSetup getSetup() {  return setup; }
-		@Override public ImmutableSet<Piece> getPlayers() {
-			Set<Piece> players = new HashSet<Piece>();
+		@Nonnull @Override public GameSetup getSetup() {  return setup; }
+		@Nonnull @Override public ImmutableSet<Piece> getPlayers() {
+			Set<Piece> players = new HashSet<>();
 			for (Player player : everyone)
 				players.add(player.piece());
 			return ImmutableSet.copyOf(players);
 		}
-		@Override public Optional<Integer> getDetectiveLocation(Detective detective) {
+		@Nonnull @Override public Optional<Integer> getDetectiveLocation(Detective detective) {
 			for (Player player : detectives)
 				if (player.piece().equals(detective)) return Optional.of(player.location());
 			return Optional.empty();
 		}
-		@Override public Optional<TicketBoard> getPlayerTickets(Piece piece) {
+		@Nonnull @Override public Optional<TicketBoard> getPlayerTickets(Piece piece) {
 			for(Player player : everyone)
 				if(player.piece() == piece)
-					return Optional.of(new TicketBoard() {
-						public int getCount(@Nonnull ScotlandYard.Ticket ticket) {
-						return player.tickets().get(ticket);
-						}
-					});
+					return Optional.of(ticket -> player.tickets().get(ticket));
 			return Optional.empty();
 		}
-		@Override public ImmutableList<LogEntry> getMrXTravelLog() { return log; }
-		@Override public ImmutableSet<Piece> getWinner() { return winner; }
+		@Nonnull @Override public ImmutableList<LogEntry> getMrXTravelLog() { return log; }
+		@Nonnull @Override public ImmutableSet<Piece> getWinner() { return winner; }
 
- 		@Override public ImmutableSet<Move> getAvailableMoves() {
+		@Nonnull @Override public ImmutableSet<Move> getAvailableMoves() {
 
 			ImmutableSet<Move.SingleMove> singleMoves = makeSingleMoves(setup, detectives, currentPlayer, currentPlayer.location());
 			Set<Move> possibleMoves = new HashSet<>(singleMoves);
@@ -90,10 +84,24 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			return ImmutableSet.copyOf(possibleMoves);
 		}
 
- 		@Override public GameState advance(Move move) {
+ 		@Nonnull @Override public GameState advance(Move move) {
 			if(!moves.contains(move)) throw new IllegalArgumentException("Illegal move: "+move);
 
 			currentPlayer.use(move.tickets());
+
+			//Get destination of the move
+			int destination = move.visit(new Move.Visitor<>() {
+
+				@Override
+				public Integer visit(Move.SingleMove singleMove) {
+					return singleMove.destination;
+				}
+
+				@Override
+				public Integer visit(Move.DoubleMove doubleMove) {
+					return doubleMove.destination2;
+				}
+			});
 
 			//Travel to location
 			//currentPlayer.at(????)
