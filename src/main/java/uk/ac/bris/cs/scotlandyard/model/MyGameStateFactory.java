@@ -36,6 +36,12 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			List<Player> allPlayers = new ArrayList<>(detectives);
 			allPlayers.add(mrX);
 			this.everyone = ImmutableList.copyOf(allPlayers);
+
+			for (Player p : everyone)
+				if (p.piece() == remaining.iterator().next()) currentPlayer = p;
+
+
+			this.moves = getAvailableMoves();
 		}
 		private GameSetup setup;
 		private ImmutableSet<Piece> remaining;
@@ -45,6 +51,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		private ImmutableList<Player> everyone;
 		private ImmutableSet<Move> moves;
 		private ImmutableSet<Piece> winner;
+		private Player currentPlayer;
 
 		@Override public GameSetup getSetup() {  return setup; }
 		@Override public ImmutableSet<Piece> getPlayers() {
@@ -71,9 +78,20 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		@Override public ImmutableList<LogEntry> getMrXTravelLog() { return log; }
 		@Override public ImmutableSet<Piece> getWinner() { return winner; }
 
- 		@Override public ImmutableSet<Move> getAvailableMoves() { return moves; }
+ 		@Override public ImmutableSet<Move> getAvailableMoves() {
 
- 		@Override public GameState advance(Move move) { return build(getSetup(), mrX, (ImmutableList<Player>) detectives); }
+			ImmutableSet<Move.SingleMove> singleMoves = makeSingleMoves(setup, detectives, currentPlayer, currentPlayer.location());
+			Set<Move> possibleMoves = new HashSet<>(singleMoves);
+
+			if (currentPlayer.isMrX()) {
+				ImmutableSet<Move.DoubleMove> doubleMoves = makeDoubleMoves(setup, detectives, currentPlayer, currentPlayer.location());
+				possibleMoves.addAll(doubleMoves);
+			}
+
+			return ImmutableSet.copyOf(possibleMoves);
+		}
+
+ 		@Override public GameState advance(Move move) { return null; }
 	}
 
 	private static ImmutableSet<Move.SingleMove> makeSingleMoves(
