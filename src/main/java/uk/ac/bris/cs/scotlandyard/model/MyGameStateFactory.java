@@ -87,11 +87,19 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				ImmutableSet<Move.DoubleMove> doubleMoves = makeDoubleMoves(setup, detectives, currentPlayer, currentPlayer.location());
 				possibleMoves.addAll(doubleMoves);
 			}
-
 			return ImmutableSet.copyOf(possibleMoves);
 		}
 
- 		@Override public GameState advance(Move move) { return null; }
+ 		@Override public GameState advance(Move move) {
+			if(!moves.contains(move)) throw new IllegalArgumentException("Illegal move: "+move);
+
+			currentPlayer.use(move.tickets());
+
+			//Travel to location
+			//currentPlayer.at(????)
+
+			return build(setup, mrX, (ImmutableList<Player>) detectives);
+		}
 	}
 
 	private static ImmutableSet<Move.SingleMove> makeSingleMoves(
