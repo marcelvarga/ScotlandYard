@@ -109,6 +109,8 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			for(ScotlandYard.Transport t : Objects.requireNonNull(setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of()))) {
 				if (player.has(t.requiredTicket())) { //construct SingleMove and add to the list of moves to return
 					singleMoves.add(new Move.SingleMove(player.piece(), player.location(), t.requiredTicket(), destination));
+				} else if (player.has(ScotlandYard.Ticket.SECRET)) {
+					singleMoves.add(new Move.SingleMove(player.piece(), player.location(), ScotlandYard.Ticket.SECRET, destination));
 				}
 			}
 			//  Consider the rules of secret moves here
@@ -153,6 +155,8 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		}
 		return ImmutableSet.copyOf(doubleMoves);
 	}
+
+
 
 	@Nonnull @Override public GameState build(
 			GameSetup setup,
