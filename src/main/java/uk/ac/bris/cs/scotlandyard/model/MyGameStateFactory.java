@@ -40,13 +40,13 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			this.moves = getAvailableMoves();
 		}
 
-		private GameSetup setup;
-		private ImmutableSet<Piece> remaining;
-		private ImmutableList<LogEntry> log;
+		private final GameSetup setup;
+		private final ImmutableSet<Piece> remaining;
+		private final ImmutableList<LogEntry> log;
 		private Player mrX;
-		private List<Player> detectives;
-		private ImmutableList<Player> everyone;
-		private ImmutableSet<Move> moves;
+		private final List<Player> detectives;
+		private final ImmutableList<Player> everyone;
+		private final ImmutableSet<Move> moves;
 		private ImmutableSet<Piece> winner;
 		private Player currentPlayer;
 
@@ -93,13 +93,13 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			for(Player player : everyone) if(player.piece() == move.commencedBy()) currentPlayer = player;
 
 			//Get destination of the move
-			int lastDestination = (int) move.visit(new DestinationVisitor(true));
-			int intermediaryDestination = (int) move.visit(new DestinationVisitor(false));
+			int lastDestination = move.visit(new DestinationVisitor(true));
+			int intermediaryDestination = move.visit(new DestinationVisitor(false));
 
 			// Get move tickets
 
-			ScotlandYard.Ticket firstTicket = (ScotlandYard.Ticket) move.visit(new TicketVisitor(true));
-			ScotlandYard.Ticket secondTicket = (ScotlandYard.Ticket) move.visit(new TicketVisitor(false));
+			ScotlandYard.Ticket firstTicket = move.visit(new TicketVisitor(true));
+			ScotlandYard.Ticket secondTicket = move.visit(new TicketVisitor(false));
 
 			// Current player uses tickets
 			// If he's a detective, mrX will get those tickets
