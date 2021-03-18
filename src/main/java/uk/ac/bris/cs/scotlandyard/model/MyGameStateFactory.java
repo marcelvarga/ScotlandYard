@@ -118,7 +118,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 
 			// Update the set of the remaining players
-			List<Piece> newRemaining = new ArrayList<Piece>(remaining);
+			List<Piece> newRemaining = new ArrayList<>(remaining);
 
 			// If the set is made out of mrX only (first round of the game), add only the detectives
 			if (newRemaining.contains(mrX.piece()) && newRemaining.size() == 1) {
@@ -128,12 +128,9 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			// Remove currentPlayer from the "remaining" list as he's making his move now
 			newRemaining.remove(currentPlayer.piece());
 
-			// If the remaining set is empty, we're at a new round: add all players to the remaining Set
+			// If the remaining set is empty, we're at a new round: add mrX to the remaining Set
 			if (newRemaining.isEmpty())
-				for (Player player : everyone) {
-					if(player == currentPlayer) newRemaining.add(currentPlayer.piece());
-					else newRemaining.add(player.piece());
-				}
+				newRemaining.add(mrX.piece());
 
 			// Return new GameState with updated mrX position and remaining players
 			if(currentPlayer.piece() == mrX.piece())
