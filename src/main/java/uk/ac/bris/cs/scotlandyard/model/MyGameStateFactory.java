@@ -51,7 +51,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		private final ImmutableSet<Move> moves;
 		private ImmutableSet<Piece> winner;
 		private Player currentPlayer;
-		private final int currentRound; // Number of the current round
+		private int currentRound; // Number of the current round
 		private final int maximumRounds; // Maximum number of rounds
 
 		@Nonnull @Override public GameSetup getSetup() {  return setup; }
@@ -155,6 +155,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 					if(setup.rounds.get(currentRound))
 						newLog.add(LogEntry.reveal(firstTicket, intermediaryDestination));
 					else newLog.add(LogEntry.hidden(firstTicket));
+					currentRound++;
 
 					if(setup.rounds.get(currentRound))
 						newLog.add(LogEntry.reveal(secondTicket, lastDestination));
