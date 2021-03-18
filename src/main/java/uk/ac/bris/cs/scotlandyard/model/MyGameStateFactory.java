@@ -75,13 +75,18 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 			ArrayList<Move.SingleMove> singleMoves = new ArrayList<>();
 			ArrayList<Move.DoubleMove> doubleMoves = new ArrayList<>();
-			ArrayList<Move> possibleMoves = new ArrayList<>(singleMoves);
+
 			for(Player player : everyone)
 				if (remaining.contains(player.piece())) {
 					singleMoves.addAll(makeSingleMoves(setup, detectives, player, player.location()));
-					if(player.isMrX() && player.has(ScotlandYard.Ticket.DOUBLE))
+
+					// If player is mrX, he has a DOUBLE ticket and has enough rounds left in order to perform a double move: find doubleMoves
+					if(player.isMrX() && player.has(ScotlandYard.Ticket.DOUBLE) && log.size() < setup.rounds.size() - 1)
 						doubleMoves.addAll(makeDoubleMoves(setup, detectives, currentPlayer, currentPlayer.location()));
 				}
+
+			// Merge singleMoves and doubleMoves into a list having "MOVE" elements
+			ArrayList<Move> possibleMoves = new ArrayList<>();
 			possibleMoves.addAll(singleMoves);
 			possibleMoves.addAll(doubleMoves);
 
@@ -107,9 +112,9 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				currentPlayer = currentPlayer.use(ticket);
 				if(currentPlayer.isDetective()) mrX = mrX.give(ticket);
 			}
+
 			// Current player is moved at destination
 			currentPlayer = currentPlayer.at(lastDestination);
-
 
 			// Update the set of the remaining players
 			List<Piece> newRemaining = new ArrayList<>(remaining);
@@ -119,13 +124,13 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				for (Player detective : detectives)
 					newRemaining.add(detective.piece());
 			}
+
 			// Remove currentPlayer from the "remaining" list as he's making his move now
 			newRemaining.remove(currentPlayer.piece());
 
 			// If the remaining set is empty, we're at a new round: add mrX to the remaining Set
 			if (newRemaining.isEmpty())
 				newRemaining.add(mrX.piece());
-
 
 			// Return new GameState with updated mrX position and remaining players
 			// Add log entries
