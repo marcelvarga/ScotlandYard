@@ -74,13 +74,18 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 		@Nonnull @Override public ImmutableSet<Move> getAvailableMoves() {
 
-			ImmutableSet<Move.SingleMove> singleMoves = makeSingleMoves(setup, detectives, currentPlayer, currentPlayer.location());
-			Set<Move> possibleMoves = new HashSet<>(singleMoves);
-
-			if (currentPlayer.isMrX() && currentPlayer.has(ScotlandYard.Ticket.DOUBLE)) {
-				ImmutableSet<Move.DoubleMove> doubleMoves = makeDoubleMoves(setup, detectives, currentPlayer, currentPlayer.location());
-				possibleMoves.addAll(doubleMoves);
+			ArrayList<Move.SingleMove> singleMoves = new ArrayList<>();
+			ArrayList<Move.DoubleMove> doubleMoves = new ArrayList<>();
+			ArrayList<Move> possibleMoves = new ArrayList<>(singleMoves);
+			for(Player player : everyone)
+				if (remaining.contains(player.piece())) {
+					singleMoves.addAll(makeSingleMoves(setup, detectives, player, player.location()));
+				if(player.isMrX() && player.has(ScotlandYard.Ticket.DOUBLE))
+					doubleMoves.addAll(makeDoubleMoves(setup, detectives, currentPlayer, currentPlayer.location()));
 			}
+			possibleMoves.addAll(singleMoves);
+			possibleMoves.addAll(doubleMoves);
+
 			return ImmutableSet.copyOf(possibleMoves);
 		}
 
@@ -112,7 +117,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 
 			// Update the set of the remaining players
-			Set<Piece> newRemaining = new HashSet<>(remaining);
+			List<Piece> newRemaining = new ArrayList<Piece>(remaining);
 
 			// If the set is made out of mrX only (first round of the game), add only the detectives
 			if (newRemaining.contains(mrX.piece()) && newRemaining.size() == 1) {
