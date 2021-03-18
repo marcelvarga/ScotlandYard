@@ -1,6 +1,6 @@
 package uk.ac.bris.cs.scotlandyard.model;
 
-public class DestinationVisitor implements Move.Visitor{
+public class DestinationVisitor implements Move.Visitor<Integer>{
 
     // True if visitor should return the final destination of a move,
     // false if visitor should return an intermediary destination (e.g. destination1 for DoubleMove, -1 for SingleMove)

@@ -1,6 +1,6 @@
 package uk.ac.bris.cs.scotlandyard.model;
 
-public class TicketVisitor implements Move.Visitor{
+public class TicketVisitor implements Move.Visitor<ScotlandYard.Ticket>{
 
     // True if visitor should return the first ticket of a move,
     // false if visitor should return the second ticket (e.g. ticket2 for DoubleMove, null for SingleMove)
