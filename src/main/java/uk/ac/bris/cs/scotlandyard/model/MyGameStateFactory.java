@@ -29,6 +29,8 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			this.mrX = mrX;
 			this.detectives = detectives;
 			this.winner = ImmutableSet.of();
+			this.currentRound = log.size() + 1;
+			this.maximumRounds = setup.rounds.size();
 
 			List<Player> allPlayers = new ArrayList<>(detectives);
 			allPlayers.add(mrX);
@@ -49,6 +51,8 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		private final ImmutableSet<Move> moves;
 		private ImmutableSet<Piece> winner;
 		private Player currentPlayer;
+		private final int currentRound; // Number of the current round
+		private final int maximumRounds; // Maximum number of rounds
 
 		@Nonnull @Override public GameSetup getSetup() {  return setup; }
 		@Nonnull @Override public ImmutableSet<Piece> getPlayers() {
@@ -81,7 +85,9 @@ public final class MyGameStateFactory implements Factory<GameState> {
 					singleMoves.addAll(makeSingleMoves(setup, detectives, player, player.location()));
 
 					// If player is mrX, he has a DOUBLE ticket and has enough rounds left in order to perform a double move: find doubleMoves
-					if(player.isMrX() && player.has(ScotlandYard.Ticket.DOUBLE) && log.size() < setup.rounds.size() - 1)
+					if(player.isMrX()
+							&& player.has(ScotlandYard.Ticket.DOUBLE)
+							&& currentRound < maximumRounds - 1)
 						doubleMoves.addAll(makeDoubleMoves(setup, detectives, currentPlayer, currentPlayer.location()));
 				}
 
