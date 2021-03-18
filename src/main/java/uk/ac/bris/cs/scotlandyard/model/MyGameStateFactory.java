@@ -87,9 +87,6 @@ public final class MyGameStateFactory implements Factory<GameState> {
  		@Nonnull @Override public GameState advance(Move move) {
 			if(!moves.contains(move)) throw new IllegalArgumentException("Illegal move: "+move);
 
-			for (ScotlandYard.Ticket ticket : move.tickets())
-				currentPlayer = currentPlayer.use(ticket);
-
 			//Get destination of the move
 			int destination = move.visit(new Move.Visitor<>() {
 
@@ -104,34 +101,44 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				}
 			});
 
+			// Current player uses tickets
+			// If he's a detective, mrX will get those tickets
+			for (ScotlandYard.Ticket ticket : move.tickets()) {
+				currentPlayer = currentPlayer.use(ticket);
+				if(currentPlayer.isDetective()) mrX = mrX.give(ticket);
+			}
+			// Current player is moved at destination
+			currentPlayer = currentPlayer.at(destination);
+
+
 			// Update the set of the remaining players
 			Set<Piece> newRemaining = new HashSet<>(remaining);
 
 			// If the set is made out of mrX only (first round of the game), add only the detectives
-			if (newRemaining.containsAll(ImmutableSet.of(mrX.piece()))) {
+			if (newRemaining.contains(mrX.piece()) && newRemaining.size() == 1) {
 				for (Player detective : detectives)
 					newRemaining.add(detective.piece());
 			}
-			// Remove currentPlayer for the remaining list
+			// Remove currentPlayer from the "remaining" list as he's making his move now
 			newRemaining.remove(currentPlayer.piece());
 
 			// If the remaining set is empty, we're at a new round: add all players to the remaining Set
 			if (newRemaining.isEmpty())
 				for (Player player : everyone) {
-					if(player == currentPlayer) newRemaining.add(player.at(destination).piece());
+					if(player == currentPlayer) newRemaining.add(currentPlayer.piece());
 					else newRemaining.add(player.piece());
 				}
 
 			// Return new GameState with updated mrX position and remaining players
 			if(currentPlayer.piece() == mrX.piece())
-				return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), log, currentPlayer.at(destination), detectives);
+				return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), log, currentPlayer, detectives);
 
 			// Return new GameState
 			// List of detectives is updated to match the position of the player that has moved
 			else{
 				List<Player> newDetectives = new ArrayList<>();
 				for(Player detective : detectives)
-					if(detective.piece() == currentPlayer.piece()) newDetectives.add(currentPlayer.at(destination));
+					if(detective.piece() == currentPlayer.piece()) newDetectives.add(currentPlayer);
 					else newDetectives.add(detective);
 				return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), log, mrX, ImmutableList.copyOf(newDetectives));
 			}
