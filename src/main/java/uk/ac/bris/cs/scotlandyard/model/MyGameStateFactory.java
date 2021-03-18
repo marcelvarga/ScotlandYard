@@ -91,6 +91,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
  		@Nonnull @Override public GameState advance(Move move) {
 			if(!moves.contains(move)) throw new IllegalArgumentException("Illegal move: "+move);
+			for(Player player : everyone) if(player.piece() == move.commencedBy()) currentPlayer = player;
 
 			//Get destination of the move
 			int destination = move.visit(new Move.Visitor<>() {
