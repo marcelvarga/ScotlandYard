@@ -4,7 +4,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import uk.ac.bris.cs.scotlandyard.model.Board.GameState;
 import uk.ac.bris.cs.scotlandyard.model.Piece.Detective;
-import uk.ac.bris.cs.scotlandyard.model.Piece.MrX;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Factory;
 
 import javax.annotation.Nonnull;
@@ -80,9 +79,9 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			for(Player player : everyone)
 				if (remaining.contains(player.piece())) {
 					singleMoves.addAll(makeSingleMoves(setup, detectives, player, player.location()));
-				if(player.isMrX() && player.has(ScotlandYard.Ticket.DOUBLE))
-					doubleMoves.addAll(makeDoubleMoves(setup, detectives, currentPlayer, currentPlayer.location()));
-			}
+					if(player.isMrX() && player.has(ScotlandYard.Ticket.DOUBLE))
+						doubleMoves.addAll(makeDoubleMoves(setup, detectives, currentPlayer, currentPlayer.location()));
+				}
 			possibleMoves.addAll(singleMoves);
 			possibleMoves.addAll(doubleMoves);
 
@@ -94,18 +93,13 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			for(Player player : everyone) if(player.piece() == move.commencedBy()) currentPlayer = player;
 
 			//Get destination of the move
-			int destination = move.visit(new Move.Visitor<>() {
+			int lastDestination = (int) move.visit(new DestinationVisitor(true));
+			int intermediaryDestination = (int) move.visit(new DestinationVisitor(false));
 
-				@Override
-				public Integer visit(Move.SingleMove singleMove) {
-					return singleMove.destination;
-				}
+			// Get move tickets
 
-				@Override
-				public Integer visit(Move.DoubleMove doubleMove) {
-					return doubleMove.destination2;
-				}
-			});
+			ScotlandYard.Ticket firstTicket = (ScotlandYard.Ticket) move.visit(new TicketVisitor(true));
+			ScotlandYard.Ticket secondTicket = (ScotlandYard.Ticket) move.visit(new TicketVisitor(false));
 
 			// Current player uses tickets
 			// If he's a detective, mrX will get those tickets
@@ -114,7 +108,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				if(currentPlayer.isDetective()) mrX = mrX.give(ticket);
 			}
 			// Current player is moved at destination
-			currentPlayer = currentPlayer.at(destination);
+			currentPlayer = currentPlayer.at(lastDestination);
 
 
 			// Update the set of the remaining players
@@ -132,9 +126,19 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			if (newRemaining.isEmpty())
 				newRemaining.add(mrX.piece());
 
+
 			// Return new GameState with updated mrX position and remaining players
-			if(currentPlayer.piece() == mrX.piece())
-				return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), log, currentPlayer, detectives);
+			// Add log entries
+			if(currentPlayer.piece() == mrX.piece()){
+				ArrayList<LogEntry> newLog = new ArrayList<>(log);
+				if(secondTicket == null)
+					newLog.add(LogEntry.reveal(firstTicket, lastDestination));
+				else {
+					newLog.add(LogEntry.reveal(firstTicket, intermediaryDestination));
+					newLog.add(LogEntry.reveal(secondTicket, lastDestination));
+				}
+				return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), ImmutableList.copyOf(newLog), currentPlayer, detectives);
+			}
 
 			// Return new GameState
 			// List of detectives is updated to match the position of the player that has moved
