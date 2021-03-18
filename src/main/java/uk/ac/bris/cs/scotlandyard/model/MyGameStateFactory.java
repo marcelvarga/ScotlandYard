@@ -38,9 +38,9 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			for (Player p : everyone)
 				if (p.piece() == remaining.iterator().next()) currentPlayer = p;
 
-
 			this.moves = getAvailableMoves();
 		}
+
 		private GameSetup setup;
 		private ImmutableSet<Piece> remaining;
 		private ImmutableList<LogEntry> log;
@@ -87,7 +87,8 @@ public final class MyGameStateFactory implements Factory<GameState> {
  		@Nonnull @Override public GameState advance(Move move) {
 			if(!moves.contains(move)) throw new IllegalArgumentException("Illegal move: "+move);
 
-			currentPlayer.use(move.tickets());
+			for (ScotlandYard.Ticket ticket : move.tickets())
+				currentPlayer = currentPlayer.use(ticket);
 
 			//Get destination of the move
 			int destination = move.visit(new Move.Visitor<>() {
@@ -103,34 +104,59 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				}
 			});
 
-			//Travel to location
-			//currentPlayer.at(????)
+			// Update the set of the remaining players
+			Set<Piece> newRemaining = new HashSet<>(remaining);
 
-			return build(setup, mrX, (ImmutableList<Player>) detectives);
+			// If the set is made out of mrX only (first round of the game), add only the detectives
+			if (newRemaining.containsAll(ImmutableSet.of(mrX.piece()))) {
+				for (Player detective : detectives)
+					newRemaining.add(detective.piece());
+			}
+			// Remove currentPlayer for the remaining list
+			newRemaining.remove(currentPlayer.piece());
+
+			// If the remaining set is empty, we're at a new round: add all players to the remaining Set
+			if (newRemaining.isEmpty())
+				for (Player player : everyone) {
+					if(player == currentPlayer) newRemaining.add(player.at(destination).piece());
+					else newRemaining.add(player.piece());
+				}
+
+			// Return new GameState with updated mrX position and remaining players
+			if(currentPlayer.piece() == mrX.piece())
+				return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), log, currentPlayer.at(destination), detectives);
+
+			// Return new GameState
+			// List of detectives is updated to match the position of the player that has moved
+			else{
+				List<Player> newDetectives = new ArrayList<>();
+				for(Player detective : detectives)
+					if(detective.piece() == currentPlayer.piece()) newDetectives.add(currentPlayer.at(destination));
+					else newDetectives.add(detective);
+				return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), log, mrX, ImmutableList.copyOf(newDetectives));
+			}
 		}
 	}
+
 
 	private static ImmutableSet<Move.SingleMove> makeSingleMoves(
 			GameSetup setup,
 			List<Player> detectives,
 			Player player,
 			int source){
-		final var singleMoves = new ArrayList<Move.SingleMove>();
-		for(int destination : setup.graph.adjacentNodes(source)) {
+		List<Move.SingleMove> singleMoves = new ArrayList<>();
+		for (int destination : setup.graph.adjacentNodes(source)) {
 
 			// You cannot move onto a detective
 			if (detectives.stream().anyMatch(d -> d.location() == destination)) continue;
 
 			// You must have the required ticket
-			for(ScotlandYard.Transport t : Objects.requireNonNull(setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of()))) {
-				if (player.has(t.requiredTicket())) { //construct SingleMove and add to the list of moves to return
-					singleMoves.add(new Move.SingleMove(player.piece(), player.location(), t.requiredTicket(), destination));
-				} if (player.has(ScotlandYard.Ticket.SECRET)) {
+			for (ScotlandYard.Transport transport : Objects.requireNonNull(setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of()))) {
+				if (player.has(transport.requiredTicket()))  //construct SingleMove and add to the list of moves to return
+					singleMoves.add(new Move.SingleMove(player.piece(), player.location(), transport.requiredTicket(), destination));
+				if (player.has(ScotlandYard.Ticket.SECRET))
 					singleMoves.add(new Move.SingleMove(player.piece(), player.location(), ScotlandYard.Ticket.SECRET, destination));
-				}
 			}
-			//  Consider the rules of secret moves here
-			//  add moves to the destination via a secret ticket if there are any left with the player
 		}
 		return ImmutableSet.copyOf(singleMoves);
 	}
@@ -187,6 +213,6 @@ public final class MyGameStateFactory implements Factory<GameState> {
 					throw new IllegalArgumentException("There can't be two detectives at the same location!");
 			}
 
-		return new MyGameState(setup, ImmutableSet.of(MrX.MRX), ImmutableList.of(), mrX, detectives);
+		return new MyGameState(setup, ImmutableSet.of(mrX.piece()), ImmutableList.of(), mrX, detectives);
 	}
 }
