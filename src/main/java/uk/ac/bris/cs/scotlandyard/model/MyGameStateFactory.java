@@ -141,12 +141,24 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			// Return new GameState with updated mrX position and remaining players
 			// Add log entries
 			if(currentPlayer.piece() == mrX.piece()){
+				// Create a new log that will be passed to the MyGameState constructor
 				ArrayList<LogEntry> newLog = new ArrayList<>(log);
+
+				// The Move is a SingleMove
 				if(secondTicket == null)
-					newLog.add(LogEntry.reveal(firstTicket, lastDestination));
+					if(setup.rounds.get(currentRound - 1))
+						newLog.add(LogEntry.reveal(firstTicket, lastDestination));
+					else newLog.add(LogEntry.hidden(firstTicket));
+
+				// The Move is a DoubleMove
 				else {
-					newLog.add(LogEntry.reveal(firstTicket, intermediaryDestination));
-					newLog.add(LogEntry.reveal(secondTicket, lastDestination));
+					if(setup.rounds.get(currentRound - 1))
+						newLog.add(LogEntry.reveal(firstTicket, intermediaryDestination));
+					else newLog.add(LogEntry.hidden(firstTicket));
+
+					if(setup.rounds.get(currentRound - 1))
+						newLog.add(LogEntry.reveal(secondTicket, lastDestination));
+					else newLog.add(LogEntry.hidden(secondTicket));
 				}
 				return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), ImmutableList.copyOf(newLog), currentPlayer, detectives);
 			}
