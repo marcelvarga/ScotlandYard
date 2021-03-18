@@ -29,7 +29,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			this.mrX = mrX;
 			this.detectives = detectives;
 			this.winner = ImmutableSet.of();
-			this.currentRound = log.size() + 1;
+			this.currentRound = log.size();
 			this.maximumRounds = setup.rounds.size();
 
 			List<Player> allPlayers = new ArrayList<>(detectives);
@@ -146,17 +146,17 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 				// The Move is a SingleMove
 				if(secondTicket == null)
-					if(setup.rounds.get(currentRound - 1))
+					if(setup.rounds.get(currentRound))
 						newLog.add(LogEntry.reveal(firstTicket, lastDestination));
 					else newLog.add(LogEntry.hidden(firstTicket));
 
 				// The Move is a DoubleMove
 				else {
-					if(setup.rounds.get(currentRound - 1))
+					if(setup.rounds.get(currentRound))
 						newLog.add(LogEntry.reveal(firstTicket, intermediaryDestination));
 					else newLog.add(LogEntry.hidden(firstTicket));
 
-					if(setup.rounds.get(currentRound - 1))
+					if(setup.rounds.get(currentRound))
 						newLog.add(LogEntry.reveal(secondTicket, lastDestination));
 					else newLog.add(LogEntry.hidden(secondTicket));
 				}
