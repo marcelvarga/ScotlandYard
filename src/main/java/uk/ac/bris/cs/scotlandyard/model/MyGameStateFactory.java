@@ -2,15 +2,12 @@ package uk.ac.bris.cs.scotlandyard.model;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import uk.ac.bris.cs.scotlandyard.model.Board.GameState;
 import uk.ac.bris.cs.scotlandyard.model.Piece.Detective;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Factory;
 
 import javax.annotation.Nonnull;
 import java.util.*;
-import java.util.stream.Stream;
-import java.util.stream.Collectors;
 
 /**
  * cw-model
@@ -58,29 +55,24 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		private final int maximumRounds; // Maximum number of rounds
 
 		@Nonnull @Override public GameSetup getSetup() {  return setup; }
-
 		@Nonnull @Override public ImmutableSet<Piece> getPlayers() {
 			Set<Piece> players = new HashSet<>();
 			for (Player player : everyone)
 				players.add(player.piece());
 			return ImmutableSet.copyOf(players);
 		}
-
 		@Nonnull @Override public Optional<Integer> getDetectiveLocation(Detective detective) {
 			for (Player player : detectives)
 				if (player.piece().equals(detective)) return Optional.of(player.location());
 			return Optional.empty();
 		}
-
 		@Nonnull @Override public Optional<TicketBoard> getPlayerTickets(Piece piece) {
 			for(Player player : everyone)
 				if(player.piece() == piece)
 					return Optional.of(ticket -> player.tickets().get(ticket));
 			return Optional.empty();
 		}
-
 		@Nonnull @Override public ImmutableList<LogEntry> getMrXTravelLog() { return log; }
-
 		@Nonnull @Override public ImmutableSet<Piece> getWinner() { return winner; }
 
 		@Nonnull @Override public ImmutableSet<Move> getAvailableMoves() {
@@ -96,13 +88,15 @@ public final class MyGameStateFactory implements Factory<GameState> {
 					if(player.isMrX()
 							&& player.has(ScotlandYard.Ticket.DOUBLE)
 							&& currentRound < maximumRounds - 1)
-						doubleMoves.addAll(makeDoubleMoves(setup, detectives, currentPlayer, currentPlayer.location(), ImmutableSet.copyOf(singleMoves)));
+						doubleMoves.addAll(makeDoubleMoves(setup, detectives, currentPlayer, currentPlayer.location()));
 				}
 
-			// Return singleMoves and doubleMoves into a list having "MOVE" elements
-			return ImmutableSet.copyOf(Stream.of(singleMoves, doubleMoves)
-					.flatMap(Collection::stream)
-					.collect(Collectors.toList()));
+			// Merge singleMoves and doubleMoves into a list having "MOVE" elements
+			ArrayList<Move> possibleMoves = new ArrayList<>();
+			possibleMoves.addAll(singleMoves);
+			possibleMoves.addAll(doubleMoves);
+
+			return ImmutableSet.copyOf(possibleMoves);
 		}
 
  		@Nonnull @Override public GameState advance(Move move) {
@@ -209,9 +203,10 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			GameSetup setup,
 			List<Player> detectives,
 			Player player,
-			int source,
-			ImmutableSet<Move.SingleMove> singleMoves){
+			int source){
 		final var doubleMoves = new ArrayList<Move.DoubleMove>();
+
+		ImmutableSet<Move.SingleMove> singleMoves = makeSingleMoves(setup, detectives, player, source);
 
 		for (Move.SingleMove singleMove1: singleMoves) {
 
