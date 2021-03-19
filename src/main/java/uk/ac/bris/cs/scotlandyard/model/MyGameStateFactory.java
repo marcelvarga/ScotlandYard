@@ -114,8 +114,8 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			for(Player player : everyone) if(player.piece() == move.commencedBy()) currentPlayer = player;
 
 			//Get destination of the move
-			int lastDestination = move.visit(new DestinationVisitor(true));
-			int intermediaryDestination = move.visit(new DestinationVisitor(false));
+			int lastDestination = move.visit(new Move.FunctionalVisitor<>(m -> m.destination, m -> m.destination2));
+			int intermediaryDestination = move.visit(new Move.FunctionalVisitor<>(m -> -1, m -> m.destination1));
 
 			// Current player uses tickets and is moved at destination
 			// If he's a detective, mrX will get those tickets
