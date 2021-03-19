@@ -44,46 +44,19 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 			for (Player p : everyone)
 				if (p.piece() == remaining.iterator().next()) currentPlayer = p;
-
-
 			this.moves = getAvailableMoves();
 			this.winner = updateWinner();
-
-		}
-
-		private ImmutableSet<Piece> updateWinner() {
-			ArrayList<Piece> winners = new ArrayList<>();
-
-			//Detectives win if:
-			if (
-				//A detective is on the same space as MrX
-					detectives.stream().anyMatch(d -> d.location() == mrX.location())
-							//MrX cannot move
-							|| ((moves != null) && moves.equals(ImmutableSet.of()) && remaining.contains(mrX.piece()))
-
-			) winners.addAll(detectives.stream().map(Player::piece).collect(Collectors.toList()));
-
-				//MrX wins if:
-			else if (
-				//All rounds are completed
-					(currentRound == maximumRounds && remaining.contains(mrX.piece()))
-							//Detectives are stuck by having no tickets
-							|| detectives.stream().noneMatch(d -> d.has(TAXI) || d.has(UNDERGROUND) || d.has(BUS))
-
-			) winners.add(mrX.piece());
-
-			return ImmutableSet.copyOf(winners);
 		}
 
 		private final GameSetup setup;
 		private final ImmutableSet<Piece> remaining;
 		private final ImmutableList<LogEntry> log;
 		private Player mrX;
+		private Player currentPlayer;
 		private final List<Player> detectives;
 		private final ImmutableList<Player> everyone;
 		private final ImmutableSet<Move> moves;
 		private ImmutableSet<Piece> winner;
-		private Player currentPlayer;
 		private int currentRound; // Number of the current round
 		private final int maximumRounds; // Maximum number of rounds
 
@@ -119,13 +92,13 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 			for(Player player : everyone)
 				if (remaining.contains(player.piece())) {
-					singleMoves.addAll(makeSingleMoves(setup, detectives, player, player.location()));
+					singleMoves.addAll(makeSingleMoves(player, player.location()));
 
 					// If player is mrX, he has a DOUBLE ticket and has enough rounds left in order to perform a double move: find doubleMoves
 					if(player.isMrX()
 							&& player.has(ScotlandYard.Ticket.DOUBLE)
 							&& currentRound < maximumRounds - 1)
-						doubleMoves.addAll(makeDoubleMoves(setup, detectives, currentPlayer, currentPlayer.location()));
+						doubleMoves.addAll(makeDoubleMoves(currentPlayer, currentPlayer.location()));
 				}
 
 			// Merge singleMoves and doubleMoves into a list having "MOVE" elements
@@ -144,24 +117,20 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			int lastDestination = move.visit(new DestinationVisitor(true));
 			int intermediaryDestination = move.visit(new DestinationVisitor(false));
 
-			// Current player uses tickets
+			// Current player uses tickets and is moved at destination
 			// If he's a detective, mrX will get those tickets
 			for (ScotlandYard.Ticket ticket : move.tickets()) {
 				currentPlayer = currentPlayer.use(ticket);
 				if(currentPlayer.isDetective()) mrX = mrX.give(ticket);
 			}
-
-			// Current player is moved at destination
 			currentPlayer = currentPlayer.at(lastDestination);
 
-			// Update the set of the remaining players
+			// Update the list of the remaining players
 			List<Piece> newRemaining = new ArrayList<>(remaining);
 
 			// If the set is made out of mrX only (first round of the game), add only the detectives
-			if (newRemaining.contains(mrX.piece()) && newRemaining.size() == 1) {
-				for (Player detective : detectives)
-					newRemaining.add(detective.piece());
-			}
+			if (newRemaining.contains(mrX.piece()) && newRemaining.size() == 1)
+				for (Player detective : detectives) newRemaining.add(detective.piece());
 
 			// Remove currentPlayer from the "remaining" list as he's making his move now
 			newRemaining.remove(currentPlayer.piece());
@@ -178,12 +147,11 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			// Add log entries
 			if(currentPlayer.piece() == mrX.piece()){
 				// Create a new log that will be passed to the MyGameState constructor
-				ArrayList<LogEntry> newLog = updateLog(log, setup.rounds, currentRound, move, intermediaryDestination, lastDestination);
+				ArrayList<LogEntry> newLog = updateLog(move, intermediaryDestination, lastDestination);
 				return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), ImmutableList.copyOf(newLog), currentPlayer, detectives);
 			}
 
-			// Return new GameState
-			// List of detectives is updated to match the position of the player that has moved
+			// Return new GameState; List of detectives is updated to match the position of the player that has moved
 			else{
 				List<Player> newDetectives = new ArrayList<>();
 				for(Player detective : detectives)
@@ -193,80 +161,85 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			}
 		}
 
-		private ArrayList<LogEntry> updateLog(
-				ImmutableList<LogEntry> log,
-				ImmutableList<Boolean> rounds,
-				int currentRound,
-				Move move,
-				int intermediaryDestination,
-				int lastDestination) {
+		private ArrayList<LogEntry> updateLog(Move move, int intermediaryDestination, int lastDestination) {
 			ArrayList<LogEntry> newLog= new ArrayList<>(log);
 
 			int ticketsCount = Iterables.size(move.tickets());
-			// The Move is a SingleMove
-			if(ticketsCount == 1)
-				if(rounds.get(currentRound))
-					newLog.add(LogEntry.reveal(move.tickets().iterator().next(), lastDestination));
-				else newLog.add(LogEntry.hidden(move.tickets().iterator().next()));
 
-				// The Move is a DoubleMove
-			else {
-				if(rounds.get(currentRound))
+			// The Move is a double move, add intermediaryDestination first
+			if(ticketsCount > 1){
+				if(setup.rounds.get(currentRound))
 					newLog.add(LogEntry.reveal(move.tickets().iterator().next(), intermediaryDestination));
 				else newLog.add(LogEntry.hidden(move.tickets().iterator().next()));
 				currentRound++;
+			}
 
-				if(rounds.get(currentRound))
+			// Add lastDestination to the log
+				if (setup.rounds.get(currentRound))
 					newLog.add(LogEntry.reveal(move.tickets().iterator().next(), lastDestination));
 				else newLog.add(LogEntry.hidden(move.tickets().iterator().next()));
-			}
+
 			return newLog;
 		}
+		/////////////////////////////////////////////////////////////////////////////
+		// Helper functions
 
-	}
+		private ImmutableSet<Piece> updateWinner() {
+			ArrayList<Piece> winners = new ArrayList<>();
 
+			//Detectives win if:
+			if (
+				//A detective is on the same space as MrX
+					detectives.stream().anyMatch(d -> d.location() == mrX.location())
+							//MrX cannot move
+							|| ((moves != null) && moves.equals(ImmutableSet.of()) && remaining.contains(mrX.piece()))
 
-	private static ImmutableSet<Move.SingleMove> makeSingleMoves(
-			GameSetup setup,
-			List<Player> detectives,
-			Player player,
-			int source){
-		List<Move.SingleMove> singleMoves = new ArrayList<>();
-		for (int destination : setup.graph.adjacentNodes(source)) {
+			) winners.addAll(detectives.stream().map(Player::piece).collect(Collectors.toList()));
 
-			// You cannot move onto a detective
-			if (detectives.stream().anyMatch(d -> d.location() == destination)) continue;
+				//MrX wins if:
+			else if (
+				//All rounds are completed
+					(currentRound == maximumRounds && remaining.contains(mrX.piece()))
+							//Detectives are stuck by having no tickets
+							|| detectives.stream().noneMatch(d -> d.has(TAXI) || d.has(UNDERGROUND) || d.has(BUS))
 
-			// You must have the required ticket
-			for (ScotlandYard.Transport transport : Objects.requireNonNull(setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of()))) {
-				if (player.has(transport.requiredTicket()))  //construct SingleMove and add to the list of moves to return
-					singleMoves.add(new Move.SingleMove(player.piece(), player.location(), transport.requiredTicket(), destination));
-				if (player.has(ScotlandYard.Ticket.SECRET))
-					singleMoves.add(new Move.SingleMove(player.piece(), player.location(), ScotlandYard.Ticket.SECRET, destination));
-			}
+			) winners.add(mrX.piece());
+
+			return ImmutableSet.copyOf(winners);
 		}
-		return ImmutableSet.copyOf(singleMoves);
-	}
+		private ImmutableSet<Move.SingleMove> makeSingleMoves(Player player, int source){
+			List<Move.SingleMove> singleMoves = new ArrayList<>();
+			for (int destination : setup.graph.adjacentNodes(source)) {
 
-	private static ImmutableSet<Move.DoubleMove> makeDoubleMoves(
-			GameSetup setup,
-			List<Player> detectives,
-			Player player,
-			int source){
-		final var doubleMoves = new ArrayList<Move.DoubleMove>();
+				// You cannot move onto a detective
+				if (detectives.stream().anyMatch(d -> d.location() == destination)) continue;
 
-		ImmutableSet<Move.SingleMove> singleMoves = makeSingleMoves(setup, detectives, player, source);
-
-		for (Move.SingleMove singleMove1: singleMoves) {
-
-			ImmutableSet<Move.SingleMove> MoreSingleMoves = makeSingleMoves(setup, detectives, player.use(singleMove1.ticket), singleMove1.destination);
-
-			for (Move.SingleMove singleMove2 : MoreSingleMoves) {
-				doubleMoves.add(new Move.DoubleMove(player.piece(), source, singleMove1.ticket, singleMove1.destination, singleMove2.ticket, singleMove2.destination));
+				// You must have the required ticket
+				for (ScotlandYard.Transport transport : Objects.requireNonNull(setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of()))) {
+					if (player.has(transport.requiredTicket()))  //construct SingleMove and add to the list of moves to return
+						singleMoves.add(new Move.SingleMove(player.piece(), player.location(), transport.requiredTicket(), destination));
+					if (player.has(ScotlandYard.Ticket.SECRET))
+						singleMoves.add(new Move.SingleMove(player.piece(), player.location(), ScotlandYard.Ticket.SECRET, destination));
+				}
 			}
+			return ImmutableSet.copyOf(singleMoves);
 		}
+		private ImmutableSet<Move.DoubleMove> makeDoubleMoves (Player player, int source){
+			final var doubleMoves = new ArrayList<Move.DoubleMove>();
 
-		return ImmutableSet.copyOf(doubleMoves);
+			ImmutableSet<Move.SingleMove> singleMoves = makeSingleMoves(player, source);
+
+			for (Move.SingleMove singleMove1: singleMoves) {
+
+				ImmutableSet<Move.SingleMove> MoreSingleMoves = makeSingleMoves(player.use(singleMove1.ticket), singleMove1.destination);
+
+				for (Move.SingleMove singleMove2 : MoreSingleMoves) {
+					doubleMoves.add(new Move.DoubleMove(player.piece(), source, singleMove1.ticket, singleMove1.destination, singleMove2.ticket, singleMove2.destination));
+				}
+			}
+
+			return ImmutableSet.copyOf(doubleMoves);
+		}
 	}
 
 	@Nonnull @Override public GameState build(
