@@ -9,6 +9,11 @@ import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Factory;
 
 import javax.annotation.Nonnull;
 import java.util.*;
+import java.util.stream.Collectors;
+
+import static uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Ticket.TAXI;
+import static uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Ticket.BUS;
+import static uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Ticket.UNDERGROUND;
 
 /**
  * cw-model
@@ -29,16 +34,25 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			this.log = log;
 			this.mrX = mrX;
 			this.detectives = detectives;
+			this.winner = ImmutableSet.of();
 			this.currentRound = log.size();
 			this.maximumRounds = setup.rounds.size();
 
 			List<Player> allPlayers = new ArrayList<>(detectives);
 			allPlayers.add(mrX);
 			this.everyone = ImmutableList.copyOf(allPlayers);
-			this.moves = getAvailableMoves();
-			this.winner = ImmutableSet.of();
-		//updateWinner(remaining, detectives, mrX, moves, currentRound, maximumRounds);
 
+			for (Player p : everyone)
+				if (p.piece() == remaining.iterator().next()) currentPlayer = p;
+
+			this.winner = getWinner();
+
+			//Moves are not generated if there's a winner
+			if (winner.isEmpty()) {
+				this.moves = getAvailableMoves();
+			} else {
+				this.moves = ImmutableSet.copyOf(Collections.emptyList());
+			}
 		}
 
 		private final GameSetup setup;
@@ -72,9 +86,40 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			return Optional.empty();
 		}
 		@Nonnull @Override public ImmutableList<LogEntry> getMrXTravelLog() { return log; }
-		@Nonnull @Override public ImmutableSet<Piece> getWinner() { return winner; }
+
+		@Nonnull @Override public ImmutableSet<Piece> getWinner() {
+			ArrayList<Piece> winners = new ArrayList<>();
+
+			if (moves != null) System.out.println(moves.toString());
+			else System.out.println("NULL MOVES");
+
+			//Detectives win if:
+			if (
+				//A detective is on the same space as MrX
+				detectives.stream().anyMatch(d -> d.location() == mrX.location())
+
+				//MrX cannot move
+				|| ((moves != null) && moves.equals(ImmutableSet.of()))
+
+				) winners.addAll(detectives.stream().map(Player::piece).collect(Collectors.toList()));
+
+			//MrX wins if:
+			else if (
+				//All rounds are completed
+				(currentRound == maximumRounds + 1)
+
+				//Detectives are stuck by having no tickets
+				|| detectives.stream().noneMatch(d -> d.has(TAXI) || d.has(UNDERGROUND) || d.has(BUS))
+
+				) winners.add(mrX.piece());
+
+			return ImmutableSet.copyOf(winners);
+		}
 
 		@Nonnull @Override public ImmutableSet<Move> getAvailableMoves() {
+
+			//Don't get available moves if there's a winner!
+			if (!winner.isEmpty()) return ImmutableSet.copyOf(Collections.emptyList());
 
 			ArrayList<Move.SingleMove> singleMoves = new ArrayList<>();
 			ArrayList<Move.DoubleMove> doubleMoves = new ArrayList<>();
@@ -87,7 +132,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 					if(player.isMrX()
 							&& player.has(ScotlandYard.Ticket.DOUBLE)
 							&& currentRound < maximumRounds - 1)
-						doubleMoves.addAll(makeDoubleMoves(setup, detectives, player, player.location()));
+						doubleMoves.addAll(makeDoubleMoves(setup, detectives, currentPlayer, currentPlayer.location()));
 				}
 
 			// Merge singleMoves and doubleMoves into a list having "MOVE" elements
@@ -105,6 +150,11 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			//Get destination of the move
 			int lastDestination = move.visit(new DestinationVisitor(true));
 			int intermediaryDestination = move.visit(new DestinationVisitor(false));
+
+			// Get move tickets
+
+			ScotlandYard.Ticket firstTicket = move.visit(new TicketVisitor(true));
+			ScotlandYard.Ticket secondTicket = move.visit(new TicketVisitor(false));
 
 			// Current player uses tickets
 			// If he's a detective, mrX will get those tickets
@@ -135,11 +185,26 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			// Return new GameState with updated mrX position and remaining players
 			// Add log entries
 			if(currentPlayer.piece() == mrX.piece()){
-
 				// Create a new log that will be passed to the MyGameState constructor
-				ArrayList<LogEntry> newLog =
-						updateLog(log, setup.rounds, currentRound, move, intermediaryDestination, lastDestination);
+				ArrayList<LogEntry> newLog = new ArrayList<>(log);
 
+				// The Move is a SingleMove
+				if(secondTicket == null)
+					if(setup.rounds.get(currentRound))
+						newLog.add(LogEntry.reveal(firstTicket, lastDestination));
+					else newLog.add(LogEntry.hidden(firstTicket));
+
+				// The Move is a DoubleMove
+				else {
+					if(setup.rounds.get(currentRound))
+						newLog.add(LogEntry.reveal(firstTicket, intermediaryDestination));
+					else newLog.add(LogEntry.hidden(firstTicket));
+					currentRound++;
+
+					if(setup.rounds.get(currentRound))
+						newLog.add(LogEntry.reveal(secondTicket, lastDestination));
+					else newLog.add(LogEntry.hidden(secondTicket));
+				}
 				return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), ImmutableList.copyOf(newLog), currentPlayer, detectives);
 			}
 
@@ -230,16 +295,6 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		return ImmutableSet.copyOf(doubleMoves);
 	}
 
-	private static ImmutableSet<Piece> updateWinner(
-			ImmutableSet<Piece> remaining,
-			List<Player> detectives,
-			Player mrX,
-			ImmutableSet<Move> moves,
-			int currentRound,
-			int maximumRounds) {
-		List<Piece> winners = new ArrayList<>();
-		return null;
-	}
 
 
 	@Nonnull @Override public GameState build(
