@@ -103,7 +103,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				(currentRound == maximumRounds + 1)
 
 				//Detectives are stuck by having no tickets
-				&& detectives.stream().allMatch(d -> d.has(TAXI) || d.has(UNDERGROUND) || d.has(BUS))
+				|| detectives.stream().noneMatch(d -> d.has(TAXI) || d.has(UNDERGROUND) || d.has(BUS))
 
 				) winners.add(mrX.piece());
 
@@ -114,7 +114,6 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 			//Don't get available moves if there's a winner!
 			if (!winner.isEmpty()) return ImmutableSet.copyOf(Collections.emptyList());
-
 
 			ArrayList<Move.SingleMove> singleMoves = new ArrayList<>();
 			ArrayList<Move.DoubleMove> doubleMoves = new ArrayList<>();
