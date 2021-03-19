@@ -2,6 +2,7 @@ package uk.ac.bris.cs.scotlandyard.model;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import uk.ac.bris.cs.scotlandyard.model.Board.GameState;
 import uk.ac.bris.cs.scotlandyard.model.Piece.Detective;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Factory;
@@ -28,18 +29,16 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			this.log = log;
 			this.mrX = mrX;
 			this.detectives = detectives;
-			this.winner = ImmutableSet.of();
 			this.currentRound = log.size();
 			this.maximumRounds = setup.rounds.size();
 
 			List<Player> allPlayers = new ArrayList<>(detectives);
 			allPlayers.add(mrX);
 			this.everyone = ImmutableList.copyOf(allPlayers);
-
-			for (Player p : everyone)
-				if (p.piece() == remaining.iterator().next()) currentPlayer = p;
-
 			this.moves = getAvailableMoves();
+			this.winner = ImmutableSet.of();
+		//updateWinner(remaining, detectives, mrX, moves, currentRound, maximumRounds);
+
 		}
 
 		private final GameSetup setup;
@@ -88,7 +87,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 					if(player.isMrX()
 							&& player.has(ScotlandYard.Ticket.DOUBLE)
 							&& currentRound < maximumRounds - 1)
-						doubleMoves.addAll(makeDoubleMoves(setup, detectives, currentPlayer, currentPlayer.location()));
+						doubleMoves.addAll(makeDoubleMoves(setup, detectives, player, player.location()));
 				}
 
 			// Merge singleMoves and doubleMoves into a list having "MOVE" elements
@@ -106,11 +105,6 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			//Get destination of the move
 			int lastDestination = move.visit(new DestinationVisitor(true));
 			int intermediaryDestination = move.visit(new DestinationVisitor(false));
-
-			// Get move tickets
-
-			ScotlandYard.Ticket firstTicket = move.visit(new TicketVisitor(true));
-			ScotlandYard.Ticket secondTicket = move.visit(new TicketVisitor(false));
 
 			// Current player uses tickets
 			// If he's a detective, mrX will get those tickets
@@ -141,26 +135,11 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			// Return new GameState with updated mrX position and remaining players
 			// Add log entries
 			if(currentPlayer.piece() == mrX.piece()){
+
 				// Create a new log that will be passed to the MyGameState constructor
-				ArrayList<LogEntry> newLog = new ArrayList<>(log);
+				ArrayList<LogEntry> newLog =
+						updateLog(log, setup.rounds, currentRound, move, intermediaryDestination, lastDestination);
 
-				// The Move is a SingleMove
-				if(secondTicket == null)
-					if(setup.rounds.get(currentRound))
-						newLog.add(LogEntry.reveal(firstTicket, lastDestination));
-					else newLog.add(LogEntry.hidden(firstTicket));
-
-				// The Move is a DoubleMove
-				else {
-					if(setup.rounds.get(currentRound))
-						newLog.add(LogEntry.reveal(firstTicket, intermediaryDestination));
-					else newLog.add(LogEntry.hidden(firstTicket));
-					currentRound++;
-
-					if(setup.rounds.get(currentRound))
-						newLog.add(LogEntry.reveal(secondTicket, lastDestination));
-					else newLog.add(LogEntry.hidden(secondTicket));
-				}
 				return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), ImmutableList.copyOf(newLog), currentPlayer, detectives);
 			}
 
@@ -174,6 +153,37 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), log, mrX, ImmutableList.copyOf(newDetectives));
 			}
 		}
+
+		private ArrayList<LogEntry> updateLog(
+				ImmutableList<LogEntry> log,
+				ImmutableList<Boolean> rounds,
+				int currentRound,
+				Move move,
+				int intermediaryDestination,
+				int lastDestination) {
+			ArrayList<LogEntry> newLog= new ArrayList<>(log);
+
+			int ticketsCount = Iterables.size(move.tickets());
+			// The Move is a SingleMove
+			if(ticketsCount == 1)
+				if(setup.rounds.get(currentRound))
+					newLog.add(LogEntry.reveal(move.tickets().iterator().next(), lastDestination));
+				else newLog.add(LogEntry.hidden(move.tickets().iterator().next()));
+
+				// The Move is a DoubleMove
+			else {
+				if(setup.rounds.get(currentRound))
+					newLog.add(LogEntry.reveal(move.tickets().iterator().next(), intermediaryDestination));
+				else newLog.add(LogEntry.hidden(move.tickets().iterator().next()));
+				currentRound++;
+
+				if(setup.rounds.get(currentRound))
+					newLog.add(LogEntry.reveal(move.tickets().iterator().next(), lastDestination));
+				else newLog.add(LogEntry.hidden(move.tickets().iterator().next()));
+			}
+			return newLog;
+		}
+
 	}
 
 
@@ -220,6 +230,16 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		return ImmutableSet.copyOf(doubleMoves);
 	}
 
+	private static ImmutableSet<Piece> updateWinner(
+			ImmutableSet<Piece> remaining,
+			List<Player> detectives,
+			Player mrX,
+			ImmutableSet<Move> moves,
+			int currentRound,
+			int maximumRounds) {
+		List<Piece> winners = new ArrayList<>();
+		return null;
+	}
 
 
 	@Nonnull @Override public GameState build(
