@@ -151,11 +151,6 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			int lastDestination = move.visit(new DestinationVisitor(true));
 			int intermediaryDestination = move.visit(new DestinationVisitor(false));
 
-			// Get move tickets
-
-			ScotlandYard.Ticket firstTicket = move.visit(new TicketVisitor(true));
-			ScotlandYard.Ticket secondTicket = move.visit(new TicketVisitor(false));
-
 			// Current player uses tickets
 			// If he's a detective, mrX will get those tickets
 			for (ScotlandYard.Ticket ticket : move.tickets()) {
