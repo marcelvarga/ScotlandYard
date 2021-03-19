@@ -8,6 +8,11 @@ import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Factory;
 
 import javax.annotation.Nonnull;
 import java.util.*;
+import java.util.stream.Collectors;
+
+import static uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Ticket.TAXI;
+import static uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Ticket.BUS;
+import static uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Ticket.UNDERGROUND;
 
 /**
  * cw-model
@@ -28,7 +33,6 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			this.log = log;
 			this.mrX = mrX;
 			this.detectives = detectives;
-			this.winner = ImmutableSet.of();
 			this.currentRound = log.size();
 			this.maximumRounds = setup.rounds.size();
 
@@ -39,7 +43,14 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			for (Player p : everyone)
 				if (p.piece() == remaining.iterator().next()) currentPlayer = p;
 
-			this.moves = getAvailableMoves();
+			this.winner = getWinner();
+
+			//Moves are not generated if there's a winner
+			if (winner.isEmpty()) {
+				this.moves = getAvailableMoves();
+			} else {
+				this.moves = ImmutableSet.copyOf(Collections.emptyList());
+			}
 		}
 
 		private final GameSetup setup;
@@ -55,27 +66,55 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		private final int maximumRounds; // Maximum number of rounds
 
 		@Nonnull @Override public GameSetup getSetup() {  return setup; }
+
 		@Nonnull @Override public ImmutableSet<Piece> getPlayers() {
 			Set<Piece> players = new HashSet<>();
 			for (Player player : everyone)
 				players.add(player.piece());
 			return ImmutableSet.copyOf(players);
 		}
+
 		@Nonnull @Override public Optional<Integer> getDetectiveLocation(Detective detective) {
 			for (Player player : detectives)
 				if (player.piece().equals(detective)) return Optional.of(player.location());
 			return Optional.empty();
 		}
+
 		@Nonnull @Override public Optional<TicketBoard> getPlayerTickets(Piece piece) {
 			for(Player player : everyone)
 				if(player.piece() == piece)
 					return Optional.of(ticket -> player.tickets().get(ticket));
 			return Optional.empty();
 		}
+
 		@Nonnull @Override public ImmutableList<LogEntry> getMrXTravelLog() { return log; }
-		@Nonnull @Override public ImmutableSet<Piece> getWinner() { return winner; }
+
+		@Nonnull @Override public ImmutableSet<Piece> getWinner() {
+			ArrayList<Piece> winners = new ArrayList<>();
+
+			//Detectives win if:
+			// A detective is on the same space as MrX
+			if (detectives.stream().anyMatch(d -> d.location() == mrX.location()))
+				winners.addAll(detectives.stream().map(Player::piece).collect(Collectors.toList()));
+
+			//MrX wins if:
+			else if (
+				//All rounds are completed
+				(currentRound == maximumRounds + 1)
+
+				//Detectives are stuck by having no tickets
+				&& detectives.stream().allMatch(d -> d.has(TAXI) || d.has(UNDERGROUND) || d.has(BUS))
+
+				) winners.add(mrX.piece());
+
+			return ImmutableSet.copyOf(winners);
+		}
 
 		@Nonnull @Override public ImmutableSet<Move> getAvailableMoves() {
+
+			//Don't get available moves if there's a winner!
+			if (!winner.isEmpty()) return ImmutableSet.copyOf(Collections.emptyList());
+
 
 			ArrayList<Move.SingleMove> singleMoves = new ArrayList<>();
 			ArrayList<Move.DoubleMove> doubleMoves = new ArrayList<>();
