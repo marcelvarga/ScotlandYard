@@ -92,10 +92,18 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		@Nonnull @Override public ImmutableSet<Piece> getWinner() {
 			ArrayList<Piece> winners = new ArrayList<>();
 
+			if (moves != null) System.out.println(moves.toString());
+			else System.out.println("NULL MOVES");
+
 			//Detectives win if:
-			// A detective is on the same space as MrX
-			if (detectives.stream().anyMatch(d -> d.location() == mrX.location()))
-				winners.addAll(detectives.stream().map(Player::piece).collect(Collectors.toList()));
+			if (
+				//A detective is on the same space as MrX
+				detectives.stream().anyMatch(d -> d.location() == mrX.location())
+
+				//MrX cannot move
+				|| ((moves != null) && moves.equals(ImmutableSet.of()))
+
+				) winners.addAll(detectives.stream().map(Player::piece).collect(Collectors.toList()));
 
 			//MrX wins if:
 			else if (
