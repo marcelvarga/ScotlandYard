@@ -12,10 +12,17 @@ import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Factory;
  */
 public final class MyModelFactory implements Factory<Model> {
 
+	public MyModelFactory() {
+		final Board.GameState game;
+		final ImmutableList<Model.Observer> observers;
+	}
+
+
 	@Nonnull @Override public Model build(GameSetup setup,
-	                                      Player mrX,
-	                                      ImmutableList<Player> detectives) {
-		// TODO
-		throw new RuntimeException("Implement me!");
+										  Player mrX,
+										  ImmutableList<Player> detectives) {
+
+		//IMPLEMENT ME!
+		return null;
 	}
 }
