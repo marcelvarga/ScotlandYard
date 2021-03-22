@@ -10,6 +10,8 @@ import uk.ac.bris.cs.scotlandyard.model.Model.Observer;
 import uk.ac.bris.cs.scotlandyard.model.Model.Observer.Event;
 import uk.ac.bris.cs.scotlandyard.model.Board.GameState;
 
+import java.util.ArrayList;
+
 /**
  * cw-model
  * Stage 2: Complete this class
@@ -19,47 +21,50 @@ public final class MyModelFactory implements Factory<Model> {
 	private final class MyModel implements Model{
 
 		// Constructor
-		//Mymodel(){}
-		// Attributes
+		private MyModel(GameState gameState){
+			this.gameState = gameState;
+		}
+		GameState gameState;
+		ArrayList<Observer> observers = new ArrayList<>();
 
-
-		//
-
-		@Nonnull
-		@Override
+		@Nonnull @Override
 		public Board getCurrentBoard() {
-			return null;
+			return gameState;
 		}
 
 		@Override
 		public void registerObserver(@Nonnull Observer observer) {
-
+			if(observer == null) throw new NullPointerException("Observer is null!");
+			if(observers.contains(observer)) throw new IllegalArgumentException("Can't have the same spectator twice!");
+			observers.add(observer);
 		}
 
 		@Override
 		public void unregisterObserver(@Nonnull Observer observer) {
-
+			if(observer == null) throw new NullPointerException("Observer is null!");
+			if(!observers.contains(observer)) throw new IllegalArgumentException("Observer not found!");
+			observers.remove(observer);
 		}
 
-		@Nonnull
-		@Override
+		@Nonnull @Override
 		public ImmutableSet<Observer> getObservers() {
-			return null;
+			return ImmutableSet.copyOf(observers);
 		}
 
 		@Override
 		public void chooseMove(@Nonnull Move move) {
 			//MOVE!
-			game.advance(move);
+			gameState = gameState.advance(move);
+
 
 			//Figure out whether the game has ended
 			Event e;
-			if (game.getWinner().isEmpty()) e = Event.GAME_OVER;
+			if (!gameState.getWinner().isEmpty()) e = Event.GAME_OVER;
 			else e = Event.MOVE_MADE;
 
 			//Notify each observer the event
 			for(Observer observer : observers) {
-				observer.onModelChanged(game, e);
+				observer.onModelChanged(gameState, e);
 			}
 		}
 	}
@@ -68,7 +73,6 @@ public final class MyModelFactory implements Factory<Model> {
 										  Player mrX,
 										  ImmutableList<Player> detectives) {
 
-		//return new MyModel(...);
-		return null;
+		return new MyModel(new MyGameStateFactory().build(setup, mrX, detectives));
 	}
 }
