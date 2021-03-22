@@ -49,7 +49,18 @@ public final class MyModelFactory implements Factory<Model> {
 
 		@Override
 		public void chooseMove(@Nonnull Move move) {
+			//MOVE!
+			game.advance(move);
 
+			//Figure out whether the game has ended
+			Event e;
+			if (game.getWinner().isEmpty()) e = Event.GAME_OVER;
+			else e = Event.MOVE_MADE;
+
+			//Notify each observer the event
+			for(Observer observer : observers) {
+				observer.onModelChanged(game, e);
+			}
 		}
 	}
 
