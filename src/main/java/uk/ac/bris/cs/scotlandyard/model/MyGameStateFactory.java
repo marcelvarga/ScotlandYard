@@ -15,10 +15,7 @@ import static uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Ticket.TAXI;
 import static uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Ticket.BUS;
 import static uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Ticket.UNDERGROUND;
 
-/**
- * cw-model
- * Stage 1: Complete this class
- */
+
 public final class MyGameStateFactory implements Factory<GameState> {
 
 	private final class MyGameState implements GameState {
@@ -123,17 +120,20 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				currentPlayer = currentPlayer.use(ticket);
 				if(currentPlayer.isDetective()) mrX = mrX.give(ticket);
 			}
+			// Update position of current player according to the move
 			currentPlayer = currentPlayer.at(lastDestination);
 
 			// Update the list of the remaining players
 			List<Piece> newRemaining = new ArrayList<>(remaining);
 
-			// If the set is made out of mrX only (first round of the game), add only the detectives
-			if (newRemaining.contains(mrX.piece()) && newRemaining.size() == 1)
-				for (Player detective : detectives) newRemaining.add(detective.piece());
+			// If the move was made by mrX add the detectives to the remaining list
+			if (currentPlayer.piece().isMrX())
+				newRemaining.addAll(detectives.stream().map(Player::piece).collect(Collectors.toList()));
+
 
 			// Remove currentPlayer from the "remaining" list as he's making his move now
 			newRemaining.remove(currentPlayer.piece());
+
 
 			// If the remaining set is empty, detectives have finished their moves; add mrX to the remaining Set
 			if (newRemaining.isEmpty() ||
@@ -143,6 +143,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 						newRemaining.clear();
 						newRemaining.add(mrX.piece());
 			}
+
 			// Return new GameState with updated mrX position and remaining players
 			// Add log entries
 			if(currentPlayer.piece() == mrX.piece()){
@@ -155,6 +156,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			else{
 				List<Player> newDetectives = new ArrayList<>();
 				for(Player detective : detectives)
+					// Replace detective with the updated currentPlayer
 					if(detective.piece() == currentPlayer.piece()) newDetectives.add(currentPlayer);
 					else newDetectives.add(detective);
 				return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), log, mrX, ImmutableList.copyOf(newDetectives));
