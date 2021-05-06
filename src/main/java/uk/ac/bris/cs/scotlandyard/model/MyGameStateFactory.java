@@ -154,11 +154,8 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 			// Return new GameState; List of detectives is updated to match the position of the player that has moved
 			else{
-				List<Player> newDetectives = new ArrayList<>();
-				for(Player detective : detectives)
-					// Replace detective with the updated currentPlayer
-					if(detective.piece() == currentPlayer.piece()) newDetectives.add(currentPlayer);
-					else newDetectives.add(detective);
+				// If the detective is the current player, replace them with that
+				List<Player> newDetectives = detectives.stream().map(d -> (d.piece() == currentPlayer.piece()) ? currentPlayer : d).collect(Collectors.toList());
 				return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), log, mrX, ImmutableList.copyOf(newDetectives));
 			}
 		}
