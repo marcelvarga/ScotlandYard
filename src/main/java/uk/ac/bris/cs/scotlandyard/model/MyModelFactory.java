@@ -6,7 +6,6 @@ import javax.annotation.Nonnull;
 
 import com.google.common.collect.ImmutableSet;
 import uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Factory;
-import uk.ac.bris.cs.scotlandyard.model.Model.Observer;
 import uk.ac.bris.cs.scotlandyard.model.Model.Observer.Event;
 import uk.ac.bris.cs.scotlandyard.model.Board.GameState;
 
@@ -20,12 +19,13 @@ public final class MyModelFactory implements Factory<Model> {
 
 	private final class MyModel implements Model{
 
+		GameState gameState;
+		ArrayList<Observer> observers = new ArrayList<>();
+
 		// Constructor
 		private MyModel(GameState gameState){
 			this.gameState = gameState;
 		}
-		GameState gameState;
-		ArrayList<Observer> observers = new ArrayList<>();
 
 		@Nonnull @Override
 		public Board getCurrentBoard() {
@@ -53,9 +53,8 @@ public final class MyModelFactory implements Factory<Model> {
 
 		@Override
 		public void chooseMove(@Nonnull Move move) {
-			//MOVE!
+			//Make the move
 			gameState = gameState.advance(move);
-
 
 			//Figure out whether the game has ended
 			Event e;
