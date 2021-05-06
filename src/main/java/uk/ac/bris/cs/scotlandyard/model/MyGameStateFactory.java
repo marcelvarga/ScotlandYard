@@ -99,11 +99,11 @@ public final class MyGameStateFactory implements Factory<GameState> {
 				}
 
 			// Merge singleMoves and doubleMoves into a list having "MOVE" elements
-			ArrayList<Move> possibleMoves = new ArrayList<>();
-			possibleMoves.addAll(singleMoves);
-			possibleMoves.addAll(doubleMoves);
+			ArrayList<Move> availableMoves = new ArrayList<>();
+			availableMoves.addAll(singleMoves);
+			availableMoves.addAll(doubleMoves);
 
-			return ImmutableSet.copyOf(possibleMoves);
+			return ImmutableSet.copyOf(availableMoves);
 		}
 
  		@Nonnull @Override public GameState advance(Move move) {
@@ -180,6 +180,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 			return newLog;
 		}
+
 		/////////////////////////////////////////////////////////////////////////////
 		// Helper functions
 
@@ -206,6 +207,8 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 			return ImmutableSet.copyOf(winners);
 		}
+
+		// Find available Single Moves for a player
 		private ImmutableSet<Move.SingleMove> makeSingleMoves(Player player, int source){
 			List<Move.SingleMove> singleMoves = new ArrayList<>();
 			for (int destination : setup.graph.adjacentNodes(source)) {
@@ -223,17 +226,19 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			}
 			return ImmutableSet.copyOf(singleMoves);
 		}
+
+		// Use makeSingleMoves to find available Double Moves for a player
 		private ImmutableSet<Move.DoubleMove> makeDoubleMoves (Player player, int source){
 			final var doubleMoves = new ArrayList<Move.DoubleMove>();
 
 			ImmutableSet<Move.SingleMove> singleMoves = makeSingleMoves(player, source);
 
-			for (Move.SingleMove singleMove1: singleMoves) {
+			// Find another Single Move from each Single Move that has been found
+			for (Move.SingleMove singleMove0: singleMoves) {
+				ImmutableSet<Move.SingleMove> intermediaryMoves = makeSingleMoves(player.use(singleMove0.ticket), singleMove0.destination);
 
-				ImmutableSet<Move.SingleMove> MoreSingleMoves = makeSingleMoves(player.use(singleMove1.ticket), singleMove1.destination);
-
-				for (Move.SingleMove singleMove2 : MoreSingleMoves) {
-					doubleMoves.add(new Move.DoubleMove(player.piece(), source, singleMove1.ticket, singleMove1.destination, singleMove2.ticket, singleMove2.destination));
+				for (Move.SingleMove singleMove1 : intermediaryMoves) {
+					doubleMoves.add(new Move.DoubleMove(player.piece(), source, singleMove0.ticket, singleMove0.destination, singleMove1.ticket, singleMove1.destination));
 				}
 			}
 
