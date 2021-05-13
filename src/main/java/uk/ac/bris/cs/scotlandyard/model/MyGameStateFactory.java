@@ -89,15 +89,13 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 			for(Player player : everyone)
 				if (remaining.contains(player.piece())) {
-					ArrayList<Move.SingleMove> someSingleMoves = makeSingleMoves(player, player.location());
+					singleMoves.addAll(makeSingleMoves(player, player.location()));
 
 					// If player is mrX, he has a DOUBLE ticket and has enough rounds left in order to perform a double move: find doubleMoves
 					if(player.isMrX()
 							&& player.has(ScotlandYard.Ticket.DOUBLE)
 							&& currentRound < maximumRounds - 1)
-						doubleMoves.addAll(makeDoubleMoves(currentPlayer, currentPlayer.location(), someSingleMoves));
-
-					singleMoves.addAll(someSingleMoves);
+						doubleMoves.addAll(makeDoubleMoves(currentPlayer, currentPlayer.location(), singleMoves));
 				}
 
 			// Merge singleMoves and doubleMoves into a list having "MOVE" elements
