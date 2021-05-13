@@ -110,16 +110,16 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			if(!moves.contains(move)) throw new IllegalArgumentException("Illegal move: "+move);
 			for(Player player : everyone) if(player.piece() == move.commencedBy()) currentPlayer = player;
 
-			//Get destination of the move
-			int lastDestination = move.visit(new Move.FunctionalVisitor<>(m -> m.destination, m -> m.destination2));
-			int intermediaryDestination = move.visit(new Move.FunctionalVisitor<>(m -> -1, m -> m.destination1));
-
 			// Current player uses tickets and is moved at destination
 			// If he's a detective, mrX will get those tickets
 			for (ScotlandYard.Ticket ticket : move.tickets()) {
 				currentPlayer = currentPlayer.use(ticket);
 				if(currentPlayer.isDetective()) mrX = mrX.give(ticket);
 			}
+			//Get destination of the move
+			int intermediaryDestination = move.visit(new Move.FunctionalVisitor<>(m -> -1, m -> m.destination1));
+			int lastDestination = move.visit(new Move.FunctionalVisitor<>(m -> m.destination, m -> m.destination2));
+
 			// Update position of current player according to the move
 			currentPlayer = currentPlayer.at(lastDestination);
 
@@ -127,7 +127,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			List<Piece> newRemaining = new ArrayList<>(remaining);
 
 			// If the move was made by mrX add the detectives to the remaining list
-			if (currentPlayer.piece().isMrX())
+			if (currentPlayer.isMrX())
 				newRemaining.addAll(detectives.stream().map(Player::piece).collect(Collectors.toList()));
 
 			// Remove currentPlayer from the "remaining" list as he's making his move now
@@ -153,7 +153,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 			// Return new GameState; List of detectives is updated to match the position of the player that has moved
 			else{
-				// If the detective is the current player, replace them with that
+				// Replace the current detective in the list of detectives with the updated "currentPlayer"
 				List<Player> newDetectives = detectives.stream().map(d -> (d.piece() == currentPlayer.piece()) ? currentPlayer : d).collect(Collectors.toList());
 				return new MyGameState(setup, ImmutableSet.copyOf(newRemaining), log, mrX, ImmutableList.copyOf(newDetectives));
 			}
@@ -181,7 +181,7 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		}
 
 		/////////////////////////////////////////////////////////////////////////////
-		// Helper functions
+		// Helper functions //
 
 		private ImmutableSet<Piece> updateWinner() {
 			ArrayList<Piece> winners = new ArrayList<>();
@@ -210,17 +210,18 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		// Find available Single Moves for a player
 		private ArrayList<Move.SingleMove> makeSingleMoves(Player player, int source){
 			ArrayList<Move.SingleMove> singleMoves = new ArrayList<>();
+
 			for (int destination : setup.graph.adjacentNodes(source)) {
 
 				// You cannot move onto a detective
-				if (detectives.stream().anyMatch(d -> d.location() == destination)) continue;
-
+				if (detectives.stream().noneMatch(d -> d.location() == destination)){
 				// You must have the required ticket
-				for (ScotlandYard.Transport transport : Objects.requireNonNull(setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of()))) {
-					if (player.has(transport.requiredTicket()))  //construct SingleMove and add to the list of moves to return
-						singleMoves.add(new Move.SingleMove(player.piece(), player.location(), transport.requiredTicket(), destination));
-					if (player.has(ScotlandYard.Ticket.SECRET))
-						singleMoves.add(new Move.SingleMove(player.piece(), player.location(), ScotlandYard.Ticket.SECRET, destination));
+					for (ScotlandYard.Transport transport : Objects.requireNonNull(setup.graph.edgeValueOrDefault(source, destination, ImmutableSet.of()))) {
+						if (player.has(transport.requiredTicket()))  //construct SingleMove and add to the list of moves to return
+							singleMoves.add(new Move.SingleMove(player.piece(), player.location(), transport.requiredTicket(), destination));
+						if (player.has(ScotlandYard.Ticket.SECRET))
+							singleMoves.add(new Move.SingleMove(player.piece(), player.location(), ScotlandYard.Ticket.SECRET, destination));
+					}
 				}
 			}
 			return singleMoves;
