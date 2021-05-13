@@ -89,13 +89,15 @@ public final class MyGameStateFactory implements Factory<GameState> {
 
 			for(Player player : everyone)
 				if (remaining.contains(player.piece())) {
-					singleMoves.addAll(makeSingleMoves(player, player.location()));
+					ArrayList<Move.SingleMove> someSingleMoves = makeSingleMoves(player, player.location());
 
 					// If player is mrX, he has a DOUBLE ticket and has enough rounds left in order to perform a double move: find doubleMoves
 					if(player.isMrX()
 							&& player.has(ScotlandYard.Ticket.DOUBLE)
 							&& currentRound < maximumRounds - 1)
-						doubleMoves.addAll(makeDoubleMoves(currentPlayer, currentPlayer.location()));
+						doubleMoves.addAll(makeDoubleMoves(currentPlayer, currentPlayer.location(), someSingleMoves));
+
+					singleMoves.addAll(someSingleMoves);
 				}
 
 			// Merge singleMoves and doubleMoves into a list having "MOVE" elements
@@ -129,7 +131,6 @@ public final class MyGameStateFactory implements Factory<GameState> {
 			// If the move was made by mrX add the detectives to the remaining list
 			if (currentPlayer.piece().isMrX())
 				newRemaining.addAll(detectives.stream().map(Player::piece).collect(Collectors.toList()));
-
 
 			// Remove currentPlayer from the "remaining" list as he's making his move now
 			newRemaining.remove(currentPlayer.piece());
@@ -209,8 +210,8 @@ public final class MyGameStateFactory implements Factory<GameState> {
 		}
 
 		// Find available Single Moves for a player
-		private ImmutableSet<Move.SingleMove> makeSingleMoves(Player player, int source){
-			List<Move.SingleMove> singleMoves = new ArrayList<>();
+		private ArrayList<Move.SingleMove> makeSingleMoves(Player player, int source){
+			ArrayList<Move.SingleMove> singleMoves = new ArrayList<>();
 			for (int destination : setup.graph.adjacentNodes(source)) {
 
 				// You cannot move onto a detective
@@ -224,25 +225,23 @@ public final class MyGameStateFactory implements Factory<GameState> {
 						singleMoves.add(new Move.SingleMove(player.piece(), player.location(), ScotlandYard.Ticket.SECRET, destination));
 				}
 			}
-			return ImmutableSet.copyOf(singleMoves);
+			return singleMoves;
 		}
 
 		// Use makeSingleMoves to find available Double Moves for a player
-		private ImmutableSet<Move.DoubleMove> makeDoubleMoves (Player player, int source){
-			final var doubleMoves = new ArrayList<Move.DoubleMove>();
-
-			ImmutableSet<Move.SingleMove> singleMoves = makeSingleMoves(player, source);
+		private ArrayList<Move.DoubleMove> makeDoubleMoves (Player player, int source, ArrayList<Move.SingleMove> singleMoves){
+			ArrayList<Move.DoubleMove> doubleMoves = new ArrayList<>();
 
 			// Find another Single Move from each Single Move that has been found
 			for (Move.SingleMove singleMove0: singleMoves) {
-				ImmutableSet<Move.SingleMove> intermediaryMoves = makeSingleMoves(player.use(singleMove0.ticket), singleMove0.destination);
+				ArrayList<Move.SingleMove> intermediaryMoves = makeSingleMoves(player.use(singleMove0.ticket), singleMove0.destination);
 
 				for (Move.SingleMove singleMove1 : intermediaryMoves) {
 					doubleMoves.add(new Move.DoubleMove(player.piece(), source, singleMove0.ticket, singleMove0.destination, singleMove1.ticket, singleMove1.destination));
 				}
 			}
 
-			return ImmutableSet.copyOf(doubleMoves);
+			return doubleMoves;
 		}
 	}
 
