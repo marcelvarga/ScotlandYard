@@ -15,6 +15,7 @@ import static uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Ticket.TAXI;
 import static uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Ticket.BUS;
 import static uk.ac.bris.cs.scotlandyard.model.ScotlandYard.Ticket.UNDERGROUND;
 
+@SuppressWarnings("InnerClassMayBeStatic")
 
 public final class MyGameStateFactory implements Factory<GameState> {
 
